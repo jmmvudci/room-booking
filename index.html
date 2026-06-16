@@ -448,17 +448,32 @@ function switchTab(t){
 }
 
 /* ===================================================
-   API — JSONP（解決 CORS）
+   API 通訊 — 三重 fallback 機制
+   1. fetch (Apps Script 支援 CORS)
+   2. JSONP (callback)
+   3. 兩者都失敗才報錯
 =================================================== */
 function apiCall(params){
   return new Promise((resolve,reject)=>{
     if(!SCRIPT_URL){reject(new Error('no url'));return;}
-    const cb='_cb'+Date.now();
-    const s=document.createElement('script');
-    window[cb]=(data)=>{delete window[cb];s.remove();resolve(data);};
-    s.onerror=()=>{delete window[cb];s.remove();reject(new Error('JSONP fail'));};
-    s.src=SCRIPT_URL+'?'+new URLSearchParams({...params,callback:cb}).toString();
-    document.body.appendChild(s);
+    const url=SCRIPT_URL+'?'+new URLSearchParams(params).toString();
+    // 方法1: 直接 fetch
+    fetch(url)
+      .then(r=>{if(!r.ok)throw new Error('http '+r.status);return r.json();})
+      .then(resolve)
+      .catch(()=>{
+        // 方法2: JSONP fallback
+        const cb='_cb'+Date.now();
+        const s=document.createElement('script');
+        const timer=setTimeout(()=>{
+          delete window[cb];s.remove();
+          reject(new Error('timeout'));
+        },10000);
+        window[cb]=(data)=>{clearTimeout(timer);delete window[cb];s.remove();resolve(data);};
+        s.onerror=()=>{clearTimeout(timer);delete window[cb];s.remove();reject(new Error('jsonp fail'));};
+        s.src=url+'&callback='+cb;
+        document.body.appendChild(s);
+      });
   });
 }
 
