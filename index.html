@@ -229,15 +229,7 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
 
 <div class="main">
 
-  <!-- Config Banner -->
-  <div class="config-banner" id="configBanner">
-    <strong>⚙️ 設定 Google Apps Script 網址</strong>（第一次使用請先設定）
-    <div class="config-row">
-      <input class="config-input" id="scriptUrlInput" type="text" placeholder="貼上您的 Apps Script 部署網址 (https://script.google.com/macros/s/.../exec)">
-      <button class="btn-config" onclick="saveScriptUrl()">儲存並連線</button>
-    </div>
-    <div style="margin-top:6px;color:#92400e;font-size:12px;">💡 請先完成 Apps Script 部署並貼上網址，再使用系統。</div>
-  </div>
+
 
   <!-- Tab -->
   <div class="tab-nav">
@@ -409,7 +401,7 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
 /* ===================================================
    設定 & 常數
 =================================================== */
-let SCRIPT_URL = localStorage.getItem('meetingRoomScriptUrl') || '';
+let SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzsTpjY61WzAgp1ktG0rPVLpl_3Sl60t2gyZWjzDtxVZVLHGlWpK8uUF0NjcXHxG-lw/exec';
 const WORK_START=8, WORK_END=17, SLOT_MIN=30;
 
 function buildTimes(){
@@ -444,21 +436,12 @@ const S={
    初始化
 =================================================== */
 async function init(){
-  updCfgBanner();
   renderCal();
   renderLpDateRow();
   if(SCRIPT_URL) await loadAll();
 }
-function updCfgBanner(){
-  document.getElementById('configBanner').style.display=SCRIPT_URL?'none':'block';
-  if(SCRIPT_URL) document.getElementById('scriptUrlInput').value=SCRIPT_URL;
-}
-function saveScriptUrl(){
-  const v=document.getElementById('scriptUrlInput').value.trim();
-  if(!v.startsWith('https://')){toast('請輸入有效的 https:// 網址','error');return;}
-  localStorage.setItem('meetingRoomScriptUrl',v);
-  SCRIPT_URL=v; updCfgBanner(); loadAll();
-}
+
+
 function switchTab(t){
   document.getElementById('tabRoom').className='tab-btn'+(t==='room'?' active-room':'');
   document.getElementById('tabLaptop').className='tab-btn'+(t==='laptop'?' active-laptop':'');
