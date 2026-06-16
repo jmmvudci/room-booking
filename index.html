@@ -435,10 +435,10 @@ const S={
 /* ===================================================
    初始化
 =================================================== */
-async function init(){
+async async function init(){
   renderCal();
   renderLpDateRow();
-  if(SCRIPT_URL) await loadAll();
+  await loadAll();
 }
 
 
