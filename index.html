@@ -416,6 +416,7 @@ function buildTimes(){
 }
 const TIMES=buildTimes();
 function pad(n){return String(n).padStart(2,'0');}
+function fmtDate(y,m,d){return y+'-'+pad(m)+'-'+pad(d);}
 
 /* ===================================================
    狀態
@@ -754,7 +755,6 @@ function clearForm(p){
   }
 }
 function gv(id){return document.getElementById(id).value.trim();}
-function fmtDate(y,m,d){return y+'-'+pad(m)+'-'+pad(d);}
 function t2m(t){const[h,m]=t.split(':').map(Number);return h*60+m;}
 function m2t(m){return pad(Math.floor(m/60))+':'+pad(m%60);}
 function showLoad(msg){document.getElementById('loadingText').textContent=msg;document.getElementById('loadingOverlay').classList.add('show');}
