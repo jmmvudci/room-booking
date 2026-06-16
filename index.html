@@ -195,6 +195,17 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
   .slot-pill{display:none;}
   .header-sub{display:none;}
 }
+
+/* 取消按鈕 */
+.btn-cancel-bk{
+  margin-left:auto;padding:3px 10px;border-radius:var(--r-sm);
+  font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;
+  background:#fff;color:var(--danger);border:1px solid var(--danger);
+  transition:all .15s;white-space:nowrap;
+}
+.btn-cancel-bk:hover{background:var(--danger);color:#fff;}
+.btn-cancel-bk.lp{color:var(--laptop);border-color:var(--laptop);}
+.btn-cancel-bk.lp:hover{background:var(--laptop);color:#fff;}
 </style>
 </head>
 <body>
@@ -238,6 +249,9 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
   <div id="roomSection">
     <div class="info-banner">
       ℹ️ 借用時間：週一至週五 08:00–17:00，每次最小單位 30 分鐘。點選日期可查看詳細時段並申請。
+    </div>
+    <div class="info-banner" style="background:#fff7ed;border-color:#fed7aa;color:#c2410c;margin-top:-8px;">
+      🔑 如需取消借用，請點選該日期，於借用紀錄右側按「✕ 取消借用」，並輸入借用時填寫的人事號及身份證後4碼進行驗證。
     </div>
 
     <div class="card">
@@ -332,7 +346,10 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
           <div class="f-group"><label class="f-label">單位 <span class="req">*</span></label><input class="f-input" id="rEmpDept" type="text" placeholder="請輸入單位名稱"></div>
           <div class="f-group"><label class="f-label">連絡電話 <span class="req">*</span></label><input class="f-input" id="rEmpPhone" type="text" placeholder="請輸入連絡電話"></div>
         </div>
-        <div class="f-group"><label class="f-label">借用事由</label><input class="f-input" id="rPurpose" type="text" placeholder="（選填）會議、訓練、研討等"></div>
+        <div class="f-row">
+          <div class="f-group"><label class="f-label">身份證後4碼 <span class="req">*</span></label><input class="f-input" id="rIdCode" type="password" maxlength="4" placeholder="用於取消借用驗證"></div>
+          <div class="f-group"><label class="f-label">借用事由</label><input class="f-input" id="rPurpose" type="text" placeholder="（選填）會議、訓練、研討等"></div>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -375,7 +392,10 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
           <div class="f-group"><label class="f-label">單位 <span class="req">*</span></label><input class="f-input lp" id="lpEmpDept" type="text" placeholder="請輸入單位名稱"></div>
           <div class="f-group"><label class="f-label">連絡電話 <span class="req">*</span></label><input class="f-input lp" id="lpEmpPhone" type="text" placeholder="請輸入連絡電話"></div>
         </div>
-        <div class="f-group"><label class="f-label">借用事由</label><input class="f-input lp" id="lpPurpose" type="text" placeholder="（選填）教學、訓練、會議等"></div>
+        <div class="f-row">
+          <div class="f-group"><label class="f-label">身份證後4碼 <span class="req">*</span></label><input class="f-input lp" id="lpIdCode" type="password" maxlength="4" placeholder="用於取消借用驗證"></div>
+          <div class="f-group"><label class="f-label">借用事由</label><input class="f-input lp" id="lpPurpose" type="text" placeholder="（選填）教學、訓練、會議等"></div>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -585,14 +605,34 @@ function renderBkList(ds){
   lst.innerHTML='<div class="bk-title">當日會議室借用紀錄</div>';
   bk.forEach(b=>{
     const it=document.createElement('div');it.className='bk-item';
+    const isPast=new Date(b.date)<TODAY;
     it.innerHTML='<div class="bk-time">'+b.startTime+' – '+b.endTime+'</div>'
       +'<div class="bk-info">'+b.empName+'（'+b.empDept+'）'+(b.purpose?'・'+b.purpose:'')+'</div>'
       +(b.needLaptop==='是'?'<span class="badge badge-lp">💻 含筆電</span>':'')
-      +'<span class="badge badge-room">🏢 會議室</span>';
+      +'<span class="badge badge-room">🏢 會議室</span>'
+      +(!isPast?'<button class="btn-cancel-bk" onclick="openCancelModal(''+b.id+'','room')">✕ 取消借用</button>':'');
     lst.appendChild(it);
   });
 }
-
+function renderLpBkList(){
+  const lst=document.getElementById('laptopBookingList');
+  const bk=S.laptopBk.filter(b=>b.date===S.lpDate).sort((a,b)=>a.startTime.localeCompare(b.startTime));
+  if(!bk.length){lst.innerHTML='<div class="empty-state"><div class="icon">💻</div>此日筆電尚無借用紀錄</div>';return;}
+  lst.innerHTML='<div class="bk-title">當日筆電借用紀錄</div>';
+  bk.forEach(b=>{
+    const it=document.createElement('div');it.className='bk-item lp';
+    const lbl=b.type==='laptop'?'💻 單獨借用':'🏢 隨會議室借用';
+    const isPast=new Date(b.date)<TODAY;
+    it.innerHTML='<div class="bk-time">'+b.startTime+' – '+b.endTime+'</div>'
+      +'<div class="bk-info">'+b.empName+'（'+b.empDept+'）'+(b.purpose?'・'+b.purpose:'')+'</div>'
+      +'<span class="badge badge-lp">'+lbl+'</span>'
+      +(!isPast?'<button class="btn-cancel-bk lp" onclick="openCancelModal(''+b.id+'','laptop')">✕ 取消借用</button>':'');
+    lst.appendChild(it);
+  });
+}
+/* ===================================================
+   筆電 Modal
+=================================================== */
 /* ===================================================
    會議室 Modal
 =================================================== */
@@ -607,10 +647,14 @@ function openRoomModal(){
   document.getElementById('roomModal').classList.add('show');
   document.getElementById('rConflict').classList.remove('show');
 }
-function closeRoomModal(){document.getElementById('roomModal').classList.remove('show');clearForm('r');}
-
+function closeRoomModal(){
+  document.getElementById('roomModal').classList.remove('show');
+  clearForm('r');
+}
 async function submitRoom(){
-  if(!chkFields(['rEmpId','rEmpName','rEmpDept','rEmpPhone']))return;
+  if(!chkFields(['rEmpId','rEmpName','rEmpDept','rEmpPhone','rIdCode']))return;
+  const idCode=gv('rIdCode');
+  if(idCode.length!==4){toast('身份證後4碼請輸入4位','error');return;}
   const st=document.getElementById('rStart').value, en=document.getElementById('rEnd').value;
   if(t2m(st)>=t2m(en)){toast('結束時間必須晚於開始時間','error');return;}
   const req=slots(st,en);
@@ -628,72 +672,13 @@ async function submitRoom(){
   try{
     const r=await apiCall({action:'book',type:'room',date:S.selDate,startTime:st,endTime:en,
       empId:gv('rEmpId'),empName:gv('rEmpName'),empDept:gv('rEmpDept'),empPhone:gv('rEmpPhone'),
-      purpose:gv('rPurpose'),needLaptop:nl?'是':'否'});
+      purpose:gv('rPurpose'),needLaptop:nl?'是':'否',idCode:idCode});
     if(r&&r.status==='ok'){closeRoomModal();toast('✅ 會議室借用申請成功！','success');await loadAll();}
     else toast('送出失敗：'+(r?.message||'請稍後再試'),'error');
   }catch(e){toast('連線失敗，請稍後再試','error');}
   finally{hideLoad();document.getElementById('rSubmitBtn').disabled=false;}
 }
 
-/* ===================================================
-   筆電區塊
-=================================================== */
-function changeLaptopMonth(d){
-  S.lpM+=d;
-  if(S.lpM>11){S.lpM=0;S.lpY++;}
-  if(S.lpM<0){S.lpM=11;S.lpY--;}
-  renderLpDateRow();renderLpView();
-}
-function renderLpDateRow(){
-  document.getElementById('laptopMonthLabel').textContent=S.lpY+' 年 '+(S.lpM+1)+' 月';
-  const row=document.getElementById('laptopDateRow');row.innerHTML='';
-  const days=new Date(S.lpY,S.lpM+1,0).getDate();
-  const wdMap='一二三四五';
-  for(let d=1;d<=days;d++){
-    const dt=new Date(S.lpY,S.lpM,d),dow=dt.getDay();
-    if(dow===0||dow===6)continue;
-    if(dt<TODAY)continue;
-    const ds=fmtDate(S.lpY,S.lpM+1,d);
-    const hasBk=S.laptopBk.some(b=>b.date===ds);
-    const chip=document.createElement('div');
-    let cls='lp-date-chip';
-    if(ds===S.lpDate)cls+=' sel'; else if(hasBk)cls+=' has-bk';
-    chip.className=cls;
-    chip.textContent=(S.lpM+1)+'/'+d+'（'+wdMap[dow-1]+'）';
-    chip.addEventListener('click',()=>{S.lpDate=ds;renderLpDateRow();renderLpView();});
-    row.appendChild(chip);
-  }
-}
-function renderLpView(){renderLpTimeline();renderLpBkList();}
-function renderLpTimeline(){
-  const tl=document.getElementById('laptopTimeline');tl.innerHTML='';
-  const occ=new Set();
-  S.laptopBk.filter(b=>b.date===S.lpDate).forEach(b=>slots(b.startTime,b.endTime).forEach(s=>occ.add(s)));
-  TIMES.slice(0,-1).forEach(t=>{
-    const tak=occ.has(t),col=document.createElement('div');
-    col.className='ts '+(tak?'lp-taken':'lp-free');
-    col.innerHTML='<div class="ts-time">'+t+'</div><div class="ts-body"><div class="ts-dot"></div></div>';
-    tl.appendChild(col);
-  });
-}
-function renderLpBkList(){
-  const lst=document.getElementById('laptopBookingList');
-  const bk=S.laptopBk.filter(b=>b.date===S.lpDate).sort((a,b)=>a.startTime.localeCompare(b.startTime));
-  if(!bk.length){lst.innerHTML='<div class="empty-state"><div class="icon">💻</div>此日筆電尚無借用紀錄</div>';return;}
-  lst.innerHTML='<div class="bk-title">當日筆電借用紀錄</div>';
-  bk.forEach(b=>{
-    const it=document.createElement('div');it.className='bk-item lp';
-    const lbl=b.type==='laptop'?'💻 單獨借用':'🏢 隨會議室借用';
-    it.innerHTML='<div class="bk-time">'+b.startTime+' – '+b.endTime+'</div>'
-      +'<div class="bk-info">'+b.empName+'（'+b.empDept+'）'+(b.purpose?'・'+b.purpose:'')+'</div>'
-      +'<span class="badge badge-lp">'+lbl+'</span>';
-    lst.appendChild(it);
-  });
-}
-
-/* ===================================================
-   筆電 Modal
-=================================================== */
 function openLaptopModal(){
   if(!S.lpDate){toast('請先選擇日期','error');return;}
   const[y,m,d]=S.lpDate.split('-').map(Number);
@@ -708,7 +693,7 @@ function openLaptopModal(){
 function closeLaptopModal(){document.getElementById('laptopModal').classList.remove('show');clearForm('lp');}
 
 async function submitLaptop(){
-  if(!chkFields(['lpEmpId','lpEmpName','lpEmpDept','lpEmpPhone']))return;
+  if(!chkFields(['lpEmpId','lpEmpName','lpEmpDept','lpEmpPhone','lpIdCode']))return;
   const st=document.getElementById('lpStart').value, en=document.getElementById('lpEnd').value;
   if(t2m(st)>=t2m(en)){toast('結束時間必須晚於開始時間','error');return;}
   const req=slots(st,en);
@@ -720,7 +705,7 @@ async function submitLaptop(){
   try{
     const r=await apiCall({action:'book',type:'laptop',date:S.lpDate,startTime:st,endTime:en,
       empId:gv('lpEmpId'),empName:gv('lpEmpName'),empDept:gv('lpEmpDept'),empPhone:gv('lpEmpPhone'),
-      purpose:gv('lpPurpose'),needLaptop:'是'});
+      purpose:gv('lpPurpose'),needLaptop:'是',idCode:gv('lpIdCode')});
     if(r&&r.status==='ok'){closeLaptopModal();toast('✅ 筆電借用申請成功！','success');await loadAll();}
     else toast('送出失敗：'+(r?.message||'請稍後再試'),'error');
   }catch(e){toast('連線失敗，請稍後再試','error');}
@@ -777,7 +762,7 @@ function chkFields(ids){
   return ok;
 }
 function clearForm(p){
-  [p+'EmpId',p+'EmpName',p+'EmpDept',p+'EmpPhone',p+'Purpose'].forEach(id=>{
+  [p+'EmpId',p+'EmpName',p+'EmpDept',p+'EmpPhone',p+'IdCode',p+'Purpose'].forEach(id=>{
     const el=document.getElementById(id);if(el){el.value='';el.classList.remove('err');}
   });
   if(p==='r'){
@@ -797,7 +782,103 @@ function toast(msg,type='success'){
   clearTimeout(_tt);_tt=setTimeout(()=>t.classList.remove('show'),3500);
 }
 
+/* ===================================================
+   取消借用
+=================================================== */
+let cancelTarget = { id: null, type: null };
+
+function openCancelModal(id, type) {
+  cancelTarget = { id, type };
+  // 找借用資料
+  const all = [...S.roomBk, ...S.laptopBk];
+  const b = all.find(x => x.id === id);
+  if (!b) { toast('找不到借用資料', 'error'); return; }
+
+  const [y,m,d] = b.date.split('-').map(Number);
+  const dow = ['日','一','二','三','四','五','六'][new Date(y,m-1,d).getDay()];
+  const typeLabel = type === 'room' ? '🏢 會議室' : '💻 筆電';
+
+  document.getElementById('cancelSummary').innerHTML =
+    '<div class="s-row"><div class="s-lbl">借用類型</div><div class="s-val">' + typeLabel + '</div></div>'
+    + '<div class="s-row"><div class="s-lbl">日期</div><div class="s-val">' + y + '年' + m + '月' + d + '日（星期' + dow + '）</div></div>'
+    + '<div class="s-row"><div class="s-lbl">時段</div><div class="s-val">' + b.startTime + ' – ' + b.endTime + '</div></div>'
+    + '<div class="s-row"><div class="s-lbl">借用人</div><div class="s-val">' + b.empName + '（' + b.empDept + '）</div></div>';
+
+  document.getElementById('cancelEmpId').value = '';
+  document.getElementById('cancelIdCode').value = '';
+  document.getElementById('cancelErrMsg').classList.remove('show');
+  document.getElementById('cancelModal').classList.add('show');
+}
+
+function closeCancelModal() {
+  document.getElementById('cancelModal').classList.remove('show');
+}
+
+async async function confirmCancel() {
+  const empId  = document.getElementById('cancelEmpId').value.trim();
+  const idCode = document.getElementById('cancelIdCode').value.trim();
+
+  if (!empId || !idCode) { toast('請填寫人事號與身份證後4碼', 'error'); return; }
+  if (idCode.length !== 4) { toast('身份證後4碼請輸入4位數字', 'error'); return; }
+
+  document.getElementById('cancelConfirmBtn').disabled = true;
+  showLoad('驗證中…');
+  try {
+    const data = await apiCall({
+      action: 'cancel',
+      id: cancelTarget.id,
+      empId,
+      idCode,
+    });
+    if (data && data.status === 'ok') {
+      closeCancelModal();
+      toast('✅ 借用已成功取消！', 'success');
+      await loadAll();
+    } else {
+      document.getElementById('cancelErrMsg').classList.add('show');
+      toast(data?.message || '驗證失敗', 'error');
+    }
+  } catch(e) {
+    toast('連線失敗，請稍後再試', 'error');
+  } finally {
+    hideLoad();
+    document.getElementById('cancelConfirmBtn').disabled = false;
+  }
+}
+
 init();
 </script>
+
+<!-- ===== 取消借用 Modal ===== -->
+<div class="modal-overlay" id="cancelModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">🗑️ 取消借用</div>
+      <button class="modal-close" onclick="closeCancelModal()">&#215;</button>
+    </div>
+    <div class="modal-body">
+      <div class="summary-box" id="cancelSummary" style="background:#fff5f5;border-color:#fecaca;"></div>
+      <div class="f-section">
+        <div class="f-title" style="color:var(--danger);border-bottom-color:#fee2e2;">身份驗證</div>
+        <div class="f-row">
+          <div class="f-group">
+            <label class="f-label">人事號 <span class="req">*</span></label>
+            <input class="f-input" id="cancelEmpId" type="text" placeholder="請輸入借用時填寫的人事號">
+          </div>
+          <div class="f-group">
+            <label class="f-label">身份證後4碼 <span class="req">*</span></label>
+            <input class="f-input" id="cancelIdCode" type="password" maxlength="4" placeholder="請輸入借用時填寫的後4碼">
+          </div>
+        </div>
+        <div class="err-msg" id="cancelErrMsg">⚠️ 人事號或身份證後4碼不正確。</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-sec" onclick="closeCancelModal()">返回</button>
+      <button class="btn" id="cancelConfirmBtn" onclick="confirmCancel()"
+        style="background:var(--danger);color:#fff;">確認取消借用</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
