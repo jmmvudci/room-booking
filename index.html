@@ -436,7 +436,7 @@ const S={
 /* ===================================================
    初始化
 =================================================== */
-async async function init(){
+async function init(){
   renderCal();
   renderLpDateRow();
   await loadAll();
@@ -797,7 +797,7 @@ function closeCancelModal() {
   document.getElementById('cancelModal').classList.remove('show');
 }
 
-async async function confirmCancel() {
+async function confirmCancel() {
   const empId  = document.getElementById('cancelEmpId').value.trim();
   const idCode = document.getElementById('cancelIdCode').value.trim();
 
