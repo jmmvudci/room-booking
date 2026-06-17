@@ -126,7 +126,8 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
 /* Modal */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:none;align-items:center;justify-content:center;padding:var(--sp-md);}
 .modal-overlay.show{display:flex;}
-.modal{background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--shadow-md);width:100%;max-width:520px;max-height:90vh;overflow-y:auto;}
+.modal{background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--shadow-md);width:100%;max-width:520px;max-height:90vh;overflow-y:auto;animation:modalIn .25s ease;}
+@keyframes modalIn{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:none;}}
 .modal-header{padding:var(--sp-lg);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
 .modal-title{font-size:16px;font-weight:700;}
 .modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--text3);line-height:1;}
@@ -190,13 +191,116 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
 .empty-state{text-align:center;padding:var(--sp-xl);color:var(--text3);font-size:14px;}
 .empty-state .icon{font-size:36px;margin-bottom:var(--sp-sm);}
 
+
+/* ── 響應式設計 ── */
+
+/* 平板 (≤900px) */
+@media(max-width:900px){
+  .main{max-width:100%;}
+  .cal-day{min-height:64px;}
+  .legend{gap:var(--sp-sm);}
+  .legend-item{font-size:11px;}
+  .bk-item{flex-wrap:wrap;gap:6px;}
+  .modal{max-width:96vw;}
+}
+
+/* 手機 (≤680px) */
 @media(max-width:680px){
-  .f-row{grid-template-columns:1fr;}
-  .header{padding:var(--sp-md);}
-  .main{padding:var(--sp-md) var(--sp-sm);}
-  .cal-day{min-height:56px;}
-  .slot-pill{display:none;}
+  /* Header */
+  .header{padding:10px var(--sp-md);gap:10px;}
+  .header-icon{width:36px;height:36px;font-size:17px;flex-shrink:0;}
+  .header-title{font-size:15px;}
   .header-sub{display:none;}
+  .room-badge{font-size:11px;padding:3px 10px;}
+
+  /* Main layout */
+  .main{padding:var(--sp-sm);}
+  .card{padding:var(--sp-md);border-radius:var(--r-md);}
+
+  /* Tab */
+  .tab-nav{padding:4px;gap:4px;}
+  .tab-btn{font-size:13px;padding:8px 4px;}
+
+  /* Info banners */
+  .info-banner{font-size:12px;padding:8px 12px;}
+
+  /* Calendar header */
+  .cal-header{flex-direction:column;align-items:flex-start;gap:10px;margin-bottom:var(--sp-md);}
+  .cal-month-lbl{font-size:16px;}
+  .legend{gap:10px;}
+  .legend-item{font-size:11px;}
+  .legend-dot{width:10px;height:10px;}
+
+  /* Calendar grid */
+  .cal-grid{gap:2px;}
+  .cal-weekday{font-size:11px;padding:4px 0;}
+  .cal-day{min-height:52px;padding:3px;}
+  .day-num{font-size:12px;width:22px;height:22px;}
+  .slot-pill{font-size:8px;padding:1px 3px;}
+  .more-lbl{font-size:8px;}
+
+  /* Day panel */
+  .day-panel-header{flex-direction:column;align-items:flex-start;gap:8px;}
+  .day-panel-title{font-size:14px;}
+  .btn-book{width:100%;justify-content:center;font-size:13px;padding:8px;}
+  .btn-book.lp{width:100%;justify-content:center;}
+
+  /* Timeline - 水平滾動 */
+  .timeline-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .timeline{min-width:600px;}
+  .ts{min-width:40px;}
+  .ts .ts-time{font-size:9px;}
+  .ts .ts-body{height:40px;}
+  .ts-dot{width:7px;height:7px;}
+
+  /* Booking list */
+  .bk-title{font-size:12px;}
+  .bk-item{padding:8px 10px;gap:6px;}
+  .bk-time{font-size:12px;min-width:90px;}
+  .bk-info{font-size:12px;}
+  .badge{font-size:10px;padding:2px 6px;}
+  .btn-cancel-bk{font-size:11px;padding:3px 8px;}
+
+  /* Modal */
+  .modal-overlay{padding:0;align-items:flex-end;}
+  .modal{border-radius:var(--r-lg) var(--r-lg) 0 0;max-height:92vh;width:100%;}
+  .modal-header{padding:var(--sp-md);}
+  .modal-title{font-size:15px;}
+  .modal-body{padding:var(--sp-md);}
+  .modal-footer{padding:10px var(--sp-md);}
+
+  /* Form */
+  .f-row{grid-template-columns:1fr;}
+  .f-section{margin-bottom:var(--sp-md);}
+  .f-input,.f-select{font-size:16px;} /* 防止 iOS 自動縮放 */
+  .summary-box{font-size:12px;}
+  .s-lbl{min-width:60px;}
+  .chk-card{padding:10px;}
+  .chk-lbl{font-size:13px;}
+  .chk-desc{font-size:11px;}
+
+  /* Buttons */
+  .btn{padding:10px 18px;font-size:14px;}
+  .modal-footer{gap:8px;}
+  .modal-footer .btn{flex:1;}
+
+  /* Laptop date chips */
+  .lp-date-chip{font-size:12px;padding:5px 12px;}
+
+  /* Cancel modal */
+  #cancelSummary{font-size:12px;}
+
+  /* Empty state */
+  .empty-state{padding:var(--sp-lg);}
+  .empty-state .icon{font-size:28px;}
+}
+
+/* 超小手機 (≤380px) */
+@media(max-width:380px){
+  .tab-btn{font-size:12px;}
+  .cal-day{min-height:44px;}
+  .slot-pill{display:none;}
+  .day-num{font-size:11px;width:20px;height:20px;}
 }
 
 /* 取消按鈕 */
@@ -209,6 +313,25 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
 .btn-cancel-bk:hover{background:var(--danger);color:#fff;}
 .btn-cancel-bk.lp{color:var(--laptop);border-color:var(--laptop);}
 .btn-cancel-bk.lp:hover{background:var(--laptop);color:#fff;}
+
+/* ── 觸控裝置優化 ── */
+@media(hover:none){
+  .cal-day:active:not(.empty):not(.wkend):not(.past){
+    border-color:var(--accent);
+    background:var(--accent-light);
+    transform:scale(0.97);
+  }
+  .cal-day.lp-selected,.cal-day.selected{transform:none;}
+  .tab-btn:active{opacity:.8;}
+  .btn-book:active,.btn:active{opacity:.85;transform:scale(0.98);}
+  .btn-cancel-bk:active{opacity:.8;}
+}
+
+/* 時間選單在手機上更好點選 */
+@media(max-width:680px){
+  .f-select{height:44px;}
+  .cal-nav-btn{width:36px;height:36px;}
+}
 </style>
 </head>
 <body>
@@ -280,6 +403,9 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
   <div id="laptopSection" style="display:none;">
     <div class="info-banner lp">
       💻 筆記型電腦借用：週一至週五 08:00–17:00，每次最小單位 30 分鐘。點選日期可查看詳細時段並申請。
+    </div>
+    <div class="info-banner" style="background:#fff7ed;border-color:#fed7aa;color:#c2410c;margin-top:-8px;">
+      🔑 如需取消借用，請點選該日期，於借用紀錄右側按「✕ 取消借用」，並輸入借用時填寫的人事號及身份證後4碼進行驗證。
     </div>
 
     <div class="card">
