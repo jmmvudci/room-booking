@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>教學研究部 會議室借用系統</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#f0f4f8; --surface:#fff; --surface2:#f8fafc; --border:#e2e8f0; --border2:#cbd5e1;
+  --accent:#1e6fba; --accent-light:#e8f1fb; --accent-hover:#1557a0;
+  --laptop:#7c3aed; --laptop-light:#f3eeff;
+  --danger:#e53e3e; --danger-light:#fff5f5; --success:#2d8a4e; --success-light:#f0fff4;
+  --warning:#d97706; --warning-light:#fffbeb;
+  --text:#1a202c; --text2:#4a5568; --text3:#718096;
+  --sp-xs:4px;--sp-sm:8px;--sp-md:16px;--sp-lg:24px;--sp-xl:32px;
+  --r-sm:6px;--r-md:10px;--r-lg:16px;
+  --shadow:0 2px 8px rgba(0,0,0,.08);--shadow-md:0 4px 16px rgba(0,0,0,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* Header */
+.header{background:var(--accent);color:#fff;padding:var(--sp-md) var(--sp-lg);display:flex;align-items:center;gap:var(--sp-md);box-shadow:0 2px 12px rgba(30,111,186,.3);}
+.header-icon{width:42px;height:42px;background:rgba(255,255,255,.2);border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;font-size:20px;}
+.header-title{font-size:18px;font-weight:700;}
+.header-sub{font-size:13px;opacity:.85;margin-top:2px;}
+.header-right{margin-left:auto;}
+.room-badge{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:20px;padding:4px 14px;font-size:13px;font-weight:500;}
+
+/* Layout */
+.main{max-width:1200px;margin:0 auto;padding:var(--sp-lg) var(--sp-md);}
+
+/* Tab */
+.tab-nav{display:flex;gap:var(--sp-sm);margin-bottom:var(--sp-lg);background:var(--surface);border-radius:var(--r-lg);padding:6px;box-shadow:var(--shadow);}
+.tab-btn{flex:1;padding:10px;border:none;border-radius:var(--r-md);font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .2s;color:var(--text3);background:none;display:flex;align-items:center;justify-content:center;gap:6px;}
+.tab-btn.active-room{background:var(--accent);color:#fff;}
+.tab-btn.active-laptop{background:var(--laptop);color:#fff;}
+.tab-btn:not(.active-room):not(.active-laptop):hover{background:var(--surface2);color:var(--text2);}
+
+/* Banner */
+.info-banner{background:var(--accent-light);border:1px solid #bcd4f0;border-radius:var(--r-md);padding:var(--sp-sm) var(--sp-md);display:flex;align-items:center;gap:var(--sp-sm);margin-bottom:var(--sp-lg);font-size:13px;color:var(--accent);}
+.info-banner.lp{background:var(--laptop-light);border-color:#c4b5fd;color:var(--laptop);}
+
+/* Calendar */
+.card{background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--shadow);padding:var(--sp-lg);margin-bottom:var(--sp-lg);}
+.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-lg);flex-wrap:wrap;gap:var(--sp-sm);}
+.cal-nav{display:flex;align-items:center;gap:var(--sp-sm);}
+.cal-nav-btn{background:none;border:1px solid var(--border2);border-radius:var(--r-sm);width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:var(--text2);transition:all .15s;}
+.cal-nav-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent);}
+.cal-month-lbl{font-size:18px;font-weight:700;}
+.legend{display:flex;align-items:center;gap:var(--sp-md);flex-wrap:wrap;}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);}
+.legend-dot{width:12px;height:12px;border-radius:3px;flex-shrink:0;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+.cal-weekday{text-align:center;font-size:12px;font-weight:600;color:var(--text3);padding:6px 0;}
+.cal-weekday.wk{color:#cbd5e1;}
+.cal-day{min-height:72px;border-radius:var(--r-sm);border:1px solid var(--border);padding:4px;cursor:pointer;transition:all .15s;background:var(--surface);}
+.cal-day:hover:not(.empty):not(.wkend):not(.past){border-color:var(--accent);box-shadow:0 0 0 2px rgba(30,111,186,.15);}
+.cal-day.empty{border-color:transparent;background:transparent;cursor:default;}
+.cal-day.wkend{background:var(--surface2);cursor:default;}
+.cal-day.past{opacity:.45;cursor:default;}
+.cal-day.today{border-color:var(--accent);border-width:2px;}
+.cal-day.selected{border-color:var(--accent);background:var(--accent-light);}
+.day-num{font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;}
+.cal-day.today .day-num{background:var(--accent);color:#fff;}
+.cal-day.wkend .day-num{color:#cbd5e1;}
+.slot-pills{display:flex;flex-direction:column;gap:2px;margin-top:2px;}
+.slot-pill{font-size:9px;border-radius:3px;padding:1px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500;}
+.slot-pill.booked{background:#fee2e2;color:#b91c1c;}
+.slot-pill.partial{background:#fef3c7;color:#92400e;}
+.slot-pill.available{background:#d1fae5;color:#065f46;}
+.more-lbl{font-size:9px;color:var(--text3);text-align:center;}
+
+/* Day Panel */
+.day-panel{display:none;}
+.day-panel.show{display:block;}
+.day-panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-md);flex-wrap:wrap;gap:var(--sp-sm);}
+.day-panel-title{font-size:16px;font-weight:700;}
+.btn-book{background:var(--accent);color:#fff;border:none;border-radius:var(--r-sm);padding:8px 18px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s;display:flex;align-items:center;gap:6px;}
+.btn-book:hover{background:var(--accent-hover);}
+.btn-book.lp{background:var(--laptop);}
+.btn-book.lp:hover{background:#6d28d9;}
+
+/* Timeline */
+.timeline-wrap{overflow-x:auto;margin-bottom:var(--sp-md);}
+.timeline{display:flex;border:1px solid var(--border);border-radius:var(--r-sm);}
+.ts{flex:1;min-width:44px;border-right:1px solid var(--border);}
+.ts:last-child{border-right:none;}
+.ts .ts-time{font-size:10px;color:var(--text3);padding:4px 0 2px;text-align:center;border-bottom:1px solid var(--border);white-space:nowrap;}
+.ts .ts-body{height:48px;display:flex;align-items:center;justify-content:center;}
+.ts.free .ts-body{background:#f0fdf4;}
+.ts.free:hover .ts-body{background:#bbf7d0;cursor:pointer;}
+.ts.taken .ts-body{background:#fee2e2;cursor:not-allowed;}
+.ts.lp-free .ts-body{background:#f5f3ff;}
+.ts.lp-free:hover .ts-body{background:#ddd6fe;cursor:pointer;}
+.ts.lp-taken .ts-body{background:#fee2e2;cursor:not-allowed;}
+.ts-dot{width:8px;height:8px;border-radius:50%;}
+.ts.free .ts-dot{background:#10b981;}
+.ts.taken .ts-dot{background:#ef4444;}
+.ts.lp-free .ts-dot{background:var(--laptop);}
+.ts.lp-taken .ts-dot{background:#ef4444;}
+
+/* Booking list */
+.bk-list{margin-top:var(--sp-md);}
+.bk-title{font-size:13px;font-weight:600;color:var(--text2);margin-bottom:var(--sp-sm);}
+.bk-item{display:flex;align-items:center;gap:var(--sp-sm);padding:var(--sp-sm) var(--sp-md);background:var(--surface2);border-radius:var(--r-sm);margin-bottom:6px;border-left:3px solid var(--accent);flex-wrap:wrap;}
+.bk-item.lp{border-left-color:var(--laptop);}
+.bk-time{font-size:13px;font-weight:700;color:var(--accent);min-width:110px;}
+.bk-item.lp .bk-time{color:var(--laptop);}
+.bk-info{font-size:13px;color:var(--text2);flex:1;}
+.badge{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500;white-space:nowrap;}
+.badge-lp{background:var(--laptop-light);color:var(--laptop);}
+.badge-room{background:var(--accent-light);color:var(--accent);}
+
+/* Laptop date row */
+.lp-date-row{display:flex;gap:var(--sp-sm);overflow-x:auto;padding-bottom:6px;margin-bottom:var(--sp-md);}
+.lp-date-chip{flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;border:2px solid var(--border2);background:#fff;color:var(--text2);transition:all .15s;}
+.lp-date-chip:hover{border-color:var(--laptop);color:var(--laptop);}
+.lp-date-chip.sel{background:var(--laptop);color:#fff;border-color:var(--laptop);}
+.lp-date-chip.has-bk{border-color:#c4b5fd;color:var(--laptop);}
+.cal-day.lp-today{border-color:var(--laptop);border-width:2px;}
+.cal-day.lp-today .day-num{background:var(--laptop);color:#fff;}
+.cal-day.lp-selected{border-color:var(--laptop);background:var(--laptop-light);}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:none;align-items:center;justify-content:center;padding:var(--sp-md);}
+.modal-overlay.show{display:flex;}
+.modal{background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--shadow-md);width:100%;max-width:520px;max-height:90vh;overflow-y:auto;}
+.modal-header{padding:var(--sp-lg);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.modal-title{font-size:16px;font-weight:700;}
+.modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--text3);line-height:1;}
+.modal-body{padding:var(--sp-lg);}
+.modal-footer{padding:var(--sp-md) var(--sp-lg);border-top:1px solid var(--border);display:flex;gap:var(--sp-sm);justify-content:flex-end;}
+
+/* Form */
+.f-section{margin-bottom:var(--sp-lg);}
+.f-title{font-size:13px;font-weight:700;color:var(--accent);margin-bottom:var(--sp-sm);padding-bottom:6px;border-bottom:2px solid var(--accent-light);}
+.f-title.lp{color:var(--laptop);border-bottom-color:var(--laptop-light);}
+.f-row{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-md);}
+.f-group{margin-bottom:var(--sp-md);}
+.f-label{display:block;font-size:13px;font-weight:600;color:var(--text2);margin-bottom:6px;}
+.req{color:var(--danger);}
+.f-input,.f-select{width:100%;padding:9px 12px;border:1px solid var(--border2);border-radius:var(--r-sm);font-size:14px;font-family:inherit;color:var(--text);background:#fff;transition:border-color .15s;outline:none;}
+.f-input:focus,.f-select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(30,111,186,.1);}
+.f-input.lp:focus,.f-select.lp:focus{border-color:var(--laptop);box-shadow:0 0 0 3px rgba(124,58,237,.1);}
+.f-input.err{border-color:var(--danger);}
+.summary-box{background:var(--accent-light);border:1px solid #bcd4f0;border-radius:var(--r-md);padding:var(--sp-md);margin-bottom:var(--sp-md);font-size:13px;}
+.summary-box.lp{background:var(--laptop-light);border-color:#c4b5fd;}
+.s-row{display:flex;margin-bottom:4px;}
+.s-lbl{color:var(--text3);min-width:70px;}
+.s-val{color:var(--text);font-weight:600;}
+.chk-card{display:flex;align-items:flex-start;gap:var(--sp-sm);padding:var(--sp-md);border:2px solid var(--border);border-radius:var(--r-md);cursor:pointer;transition:all .15s;background:var(--surface2);}
+.chk-card:has(input:checked){border-color:var(--accent);background:var(--accent-light);}
+.chk-card input{width:18px;height:18px;margin-top:2px;accent-color:var(--accent);flex-shrink:0;}
+.chk-lbl{font-size:14px;font-weight:600;}
+.chk-desc{font-size:12px;color:var(--text3);margin-top:2px;}
+.err-msg{color:var(--danger);font-size:13px;display:none;margin-top:-8px;margin-bottom:8px;}
+.err-msg.show{display:block;}
+
+/* Buttons */
+.btn{padding:9px 22px;border-radius:var(--r-sm);font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;border:none;transition:all .15s;}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover{background:var(--accent-hover);}
+.btn-primary:disabled{background:#93b8d8;cursor:not-allowed;}
+.btn-primary.lp{background:var(--laptop);}
+.btn-primary.lp:hover{background:#6d28d9;}
+.btn-primary.lp:disabled{background:#a78bda;}
+.btn-sec{background:#fff;color:var(--text2);border:1px solid var(--border2);}
+.btn-sec:hover{background:var(--surface2);}
+
+/* Config */
+.config-banner{background:#fffbeb;border:1px solid #fde68a;border-radius:var(--r-md);padding:var(--sp-md);margin-bottom:var(--sp-lg);font-size:13px;}
+.config-row{display:flex;align-items:center;gap:var(--sp-sm);margin-top:var(--sp-sm);flex-wrap:wrap;}
+.config-input{flex:1;min-width:200px;padding:7px 10px;border:1px solid #fde68a;border-radius:var(--r-sm);font-size:13px;font-family:inherit;}
+.btn-config{padding:7px 16px;background:var(--warning);color:#fff;border:none;border-radius:var(--r-sm);font-size:13px;cursor:pointer;font-family:inherit;font-weight:600;}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:var(--r-md);font-size:14px;font-weight:500;box-shadow:var(--shadow-md);z-index:2000;display:none;align-items:center;gap:8px;}
+.toast.show{display:flex;}
+.toast.success{background:var(--success-light);color:var(--success);border:1px solid #a7f3d0;}
+.toast.error{background:var(--danger-light);color:var(--danger);border:1px solid #fecaca;}
+
+/* Loading */
+.loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.85);z-index:3000;display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;}
+.loading-overlay.show{display:flex;}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-text{font-size:14px;color:var(--text2);}
+.empty-state{text-align:center;padding:var(--sp-xl);color:var(--text3);font-size:14px;}
+.empty-state .icon{font-size:36px;margin-bottom:var(--sp-sm);}
+
+@media(max-width:680px){
+  .f-row{grid-template-columns:1fr;}
+  .header{padding:var(--sp-md);}
+  .main{padding:var(--sp-md) var(--sp-sm);}
+  .cal-day{min-height:56px;}
+  .slot-pill{display:none;}
+  .header-sub{display:none;}
+}
+
+/* 取消按鈕 */
+.btn-cancel-bk{
+  margin-left:auto;padding:3px 10px;border-radius:var(--r-sm);
+  font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;
+  background:#fff;color:var(--danger);border:1px solid var(--danger);
+  transition:all .15s;white-space:nowrap;
+}
+.btn-cancel-bk:hover{background:var(--danger);color:#fff;}
+.btn-cancel-bk.lp{color:var(--laptop);border-color:var(--laptop);}
+.btn-cancel-bk.lp:hover{background:var(--laptop);color:#fff;}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loadingText">載入中…</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<div class="header">
+  <div class="header-icon">🏫</div>
+  <div>
+    <div class="header-title">教學研究部 會議室借用系統</div>
+    <div class="header-sub">Teaching &amp; Research Department — Room Booking</div>
+  </div>
+  <div class="header-right">
+    <div class="room-badge">📍 教學研究部會議室</div>
+  </div>
+</div>
+
+<div class="main">
+
+
+
+  <!-- Tab -->
+  <div class="tab-nav">
+    <button class="tab-btn active-room" id="tabRoom" onclick="switchTab('room')">🏢 借用會議室</button>
+    <button class="tab-btn" id="tabLaptop" onclick="switchTab('laptop')">💻 借用筆記型電腦</button>
+  </div>
+
+  <!-- ===== 會議室 ===== -->
+  <div id="roomSection">
+    <div class="info-banner">
+      ℹ️ 借用時間：週一至週五 08:00–17:00，每次最小單位 30 分鐘。點選日期可查看詳細時段並申請。
+    </div>
+    <div class="info-banner" style="background:#fff7ed;border-color:#fed7aa;color:#c2410c;margin-top:-8px;">
+      🔑 如需取消借用，請點選該日期，於借用紀錄右側按「✕ 取消借用」，並輸入借用時填寫的人事號及身份證後4碼進行驗證。
+    </div>
+
+    <div class="card">
+      <div class="cal-header">
+        <div class="cal-nav">
+          <button class="cal-nav-btn" onclick="changeMonth(-1)">&#8249;</button>
+          <div class="cal-month-lbl" id="calMonthLabel"></div>
+          <button class="cal-nav-btn" onclick="changeMonth(1)">&#8250;</button>
+        </div>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#d1fae5;border:1px solid #6ee7b7"></div>空閒</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#fef3c7;border:1px solid #fcd34d"></div>部分借用</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#fee2e2;border:1px solid #fca5a5"></div>全天借用</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--accent);border-radius:50%"></div>今天</div>
+        </div>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+    </div>
+
+    <div class="card day-panel" id="dayPanel">
+      <div class="day-panel-header">
+        <div class="day-panel-title" id="dayPanelTitle">—</div>
+        <button class="btn-book" onclick="openRoomModal()">＋ 申請借用會議室</button>
+      </div>
+      <div class="timeline-wrap"><div class="timeline" id="timeline"></div></div>
+      <div class="bk-list" id="bookingList"></div>
+    </div>
+  </div>
+
+  <!-- ===== 筆電 ===== -->
+  <div id="laptopSection" style="display:none;">
+    <div class="info-banner lp">
+      💻 筆記型電腦借用：週一至週五 08:00–17:00，每次最小單位 30 分鐘。點選日期可查看詳細時段並申請。
+    </div>
+
+    <div class="card">
+      <div class="cal-header">
+        <div class="cal-nav">
+          <button class="cal-nav-btn" onclick="changeLaptopMonth(-1)">&#8249;</button>
+          <div class="cal-month-lbl" id="laptopMonthLabel"></div>
+          <button class="cal-nav-btn" onclick="changeLaptopMonth(1)">&#8250;</button>
+        </div>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#f5f3ff;border:1px solid #c4b5fd"></div>空閒</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#ede9fe;border:1px solid #a78bfa"></div>部分借用</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#ddd6fe;border:1px solid #7c3aed"></div>全天借用</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#7c3aed;border-radius:50%"></div>今天</div>
+        </div>
+      </div>
+      <div class="cal-grid" id="lpCalGrid"></div>
+    </div>
+
+    <div class="card day-panel" id="lpDayPanel">
+      <div class="day-panel-header">
+        <div class="day-panel-title" id="lpDayPanelTitle">—</div>
+        <button class="btn-book lp" onclick="openLaptopModal()">＋ 申請借用筆電</button>
+      </div>
+      <div class="timeline-wrap"><div class="timeline" id="laptopTimeline"></div></div>
+      <div class="bk-list" id="laptopBookingList"></div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- ===== 會議室 Modal ===== -->
+<div class="modal-overlay" id="roomModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">🏢 申請借用會議室</div>
+      <button class="modal-close" onclick="closeRoomModal()">&#215;</button>
+    </div>
+    <div class="modal-body">
+      <div class="summary-box" id="roomSummary"></div>
+      <div class="f-section">
+        <div class="f-title">借用時段</div>
+        <div class="f-row">
+          <div class="f-group">
+            <label class="f-label">開始時間 <span class="req">*</span></label>
+            <select class="f-select" id="rStart"></select>
+          </div>
+          <div class="f-group">
+            <label class="f-label">結束時間 <span class="req">*</span></label>
+            <select class="f-select" id="rEnd"></select>
+          </div>
+        </div>
+        <div class="err-msg" id="rConflict">&#9888; 所選時段與現有借用衝突，請重新選擇。</div>
+      </div>
+      <div class="f-section">
+        <div class="f-title">設備需求</div>
+        <label class="chk-card">
+          <input type="checkbox" id="rNeedLaptop">
+          <div>
+            <div class="chk-lbl">💻 同時借用筆記型電腦</div>
+            <div class="chk-desc">借用期間一併申請筆電（系統將自動檢查筆電是否空閒）</div>
+          </div>
+        </label>
+      </div>
+      <div class="f-section">
+        <div class="f-title">借用人資料</div>
+        <div class="f-row">
+          <div class="f-group"><label class="f-label">人事號 <span class="req">*</span></label><input class="f-input" id="rEmpId" type="text" placeholder="請輸入人事號"></div>
+          <div class="f-group"><label class="f-label">姓名 <span class="req">*</span></label><input class="f-input" id="rEmpName" type="text" placeholder="請輸入姓名"></div>
+        </div>
+        <div class="f-row">
+          <div class="f-group"><label class="f-label">單位 <span class="req">*</span></label><input class="f-input" id="rEmpDept" type="text" placeholder="請輸入單位名稱"></div>
+          <div class="f-group"><label class="f-label">連絡電話 <span class="req">*</span></label><input class="f-input" id="rEmpPhone" type="text" placeholder="請輸入連絡電話"></div>
+        </div>
+        <div class="f-row">
+          <div class="f-group"><label class="f-label">身份證後4碼 <span class="req">*</span></label><input class="f-input" id="rIdCode" type="text" maxlength="4" placeholder="用於取消借用驗證"></div>
+          <div class="f-group"><label class="f-label">借用事由</label><input class="f-input" id="rPurpose" type="text" placeholder="（選填）會議、訓練、研討等"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-sec" onclick="closeRoomModal()">取消</button>
+      <button class="btn btn-primary" id="rSubmitBtn" onclick="submitRoom()">確認送出</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 筆電 Modal ===== -->
+<div class="modal-overlay" id="laptopModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">💻 申請借用筆記型電腦</div>
+      <button class="modal-close" onclick="closeLaptopModal()">&#215;</button>
+    </div>
+    <div class="modal-body">
+      <div class="summary-box lp" id="lpSummary"></div>
+      <div class="f-section">
+        <div class="f-title lp">借用時段</div>
+        <div class="f-row">
+          <div class="f-group">
+            <label class="f-label">開始時間 <span class="req">*</span></label>
+            <select class="f-select lp" id="lpStart"></select>
+          </div>
+          <div class="f-group">
+            <label class="f-label">結束時間 <span class="req">*</span></label>
+            <select class="f-select lp" id="lpEnd"></select>
+          </div>
+        </div>
+        <div class="err-msg" id="lpConflict">&#9888; 所選時段筆電已被借用，請重新選擇。</div>
+      </div>
+      <div class="f-section">
+        <div class="f-title lp">借用人資料</div>
+        <div class="f-row">
+          <div class="f-group"><label class="f-label">人事號 <span class="req">*</span></label><input class="f-input lp" id="lpEmpId" type="text" placeholder="請輸入人事號"></div>
+          <div class="f-group"><label class="f-label">姓名 <span class="req">*</span></label><input class="f-input lp" id="lpEmpName" type="text" placeholder="請輸入姓名"></div>
+        </div>
+        <div class="f-row">
+          <div class="f-group"><label class="f-label">單位 <span class="req">*</span></label><input class="f-input lp" id="lpEmpDept" type="text" placeholder="請輸入單位名稱"></div>
+          <div class="f-group"><label class="f-label">連絡電話 <span class="req">*</span></label><input class="f-input lp" id="lpEmpPhone" type="text" placeholder="請輸入連絡電話"></div>
+        </div>
+        <div class="f-row">
+          <div class="f-group"><label class="f-label">身份證後4碼 <span class="req">*</span></label><input class="f-input lp" id="lpIdCode" type="text" maxlength="4" placeholder="用於取消借用驗證"></div>
+          <div class="f-group"><label class="f-label">借用事由</label><input class="f-input lp" id="lpPurpose" type="text" placeholder="（選填）教學、訓練、會議等"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-sec" onclick="closeLaptopModal()">取消</button>
+      <button class="btn btn-primary lp" id="lpSubmitBtn" onclick="submitLaptop()">確認送出</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* 設定 */
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzsTpjY61WzAgp1ktG0rPVLpl_3Sl60t2gyZWjzDtxVZVLHGlWpK8uUF0NjcXHxG-lw/exec';
+const WORK_START=8,WORK_END=17,SLOT_MIN=30;
+
+function pad(n){return String(n).padStart(2,'0');}
+function fmtDate(y,m,d){return y+'-'+pad(m)+'-'+pad(d);}
+function t2m(t){const[h,m]=t.split(':').map(Number);return h*60+m;}
+function m2t(m){return pad(Math.floor(m/60))+':'+pad(m%60);}
+function gv(id){return document.getElementById(id).value.trim();}
+
+function buildTimes(){
+  const l=[];
+  for(let h=WORK_START;h<=WORK_END;h++){
+    for(let m=0;m<60;m+=SLOT_MIN){
+      if(h===WORK_END&&m>0)break;
+      l.push(pad(h)+':'+pad(m));
+    }
+  }
+  return l;
+}
+const TIMES=buildTimes();
+
+const TODAY=new Date();TODAY.setHours(0,0,0,0);
+const todayStr=fmtDate(TODAY.getFullYear(),TODAY.getMonth()+1,TODAY.getDate());
+
+const S={
+  calY:TODAY.getFullYear(),calM:TODAY.getMonth(),
+  selDate:null,
+  lpY:TODAY.getFullYear(),lpM:TODAY.getMonth(),
+  lpDate:todayStr,
+  roomBk:[],laptopBk:[],
+};
+
+/* 初始化 */
+async function init(){
+  renderCal();
+  renderLpCal();
+  await loadAll();
+}
+
+function switchTab(t){
+  document.getElementById('tabRoom').className='tab-btn'+(t==='room'?' active-room':'');
+  document.getElementById('tabLaptop').className='tab-btn'+(t==='laptop'?' active-laptop':'');
+  document.getElementById('roomSection').style.display=t==='room'?'':'none';
+  document.getElementById('laptopSection').style.display=t==='laptop'?'':'none';
+  if(t==='laptop')renderLpView();
+}
+
+/* API - JSONP + fetch fallback */
+function apiCall(params){
+  return new Promise((resolve,reject)=>{
+    const url=SCRIPT_URL+'?'+new URLSearchParams(params).toString();
+    fetch(url)
+      .then(r=>r.json())
+      .then(resolve)
+      .catch(()=>{
+        const cb='_cb'+Date.now();
+        const s=document.createElement('script');
+        const timer=setTimeout(()=>{delete window[cb];s.remove();reject(new Error('timeout'));},10000);
+        window[cb]=(data)=>{clearTimeout(timer);delete window[cb];s.remove();resolve(data);};
+        s.onerror=()=>{clearTimeout(timer);delete window[cb];s.remove();reject(new Error('fail'));};
+        s.src=url+'&callback='+cb;
+        document.body.appendChild(s);
+      });
+  });
+}
+
+async function loadAll(){
+  showLoad('載入借用資料中…');
+  try{
+    const d=await apiCall({action:'list'});
+    if(d&&d.status==='ok'){
+      const all=d.bookings||[];
+      S.roomBk=all.filter(b=>b.type==='room');
+      S.laptopBk=all.filter(b=>b.type==='laptop'||b.needLaptop==='是');
+      renderCal();
+      if(S.selDate)renderDayPanel(S.selDate);
+      renderLpView();
+    }else{toast('載入失敗，請確認 Apps Script 設定','error');}
+  }catch(e){toast('無法連線後端','error');}
+  finally{hideLoad();}
+}
+
+/* 月曆 */
+function changeMonth(dir){
+  S.calM+=dir;
+  if(S.calM>11){S.calM=0;S.calY++;}
+  if(S.calM<0){S.calM=11;S.calY--;}
+  renderCal();
+}
+
+function renderCal(){
+  const y=S.calY,m=S.calM;
+  document.getElementById('calMonthLabel').textContent=y+' 年 '+(m+1)+' 月';
+  const g=document.getElementById('calGrid');g.innerHTML='';
+  ['日','一','二','三','四','五','六'].forEach((d,i)=>{
+    const el=document.createElement('div');
+    el.className='cal-weekday'+(i===0||i===6?' wk':'');
+    el.textContent=d;g.appendChild(el);
+  });
+  const first=new Date(y,m,1).getDay();
+  const days=new Date(y,m+1,0).getDate();
+  for(let i=0;i<first;i++){const e=document.createElement('div');e.className='cal-day empty';g.appendChild(e);}
+  for(let d=1;d<=days;d++){
+    const dt=new Date(y,m,d),dow=dt.getDay();
+    const wk=dow===0||dow===6,past=dt<TODAY;
+    const ds=fmtDate(y,m+1,d),isTd=ds===todayStr,isSel=ds===S.selDate;
+    const el=document.createElement('div');
+    let cls='cal-day';
+    if(wk)cls+=' wkend';else if(past)cls+=' past';
+    if(isTd)cls+=' today';if(isSel)cls+=' selected';
+    el.className=cls;
+    const num=document.createElement('div');num.className='day-num';num.textContent=d;el.appendChild(num);
+    if(!wk){
+      const dayBk=S.roomBk.filter(b=>b.date===ds);
+      const pills=document.createElement('div');pills.className='slot-pills';
+      if(dayBk.length){
+        const tot=(WORK_END-WORK_START)*2,used=cntSlots(dayBk);
+        if(used>=tot){const p=document.createElement('div');p.className='slot-pill booked';p.textContent='全天借用';pills.appendChild(p);}
+        else{
+          dayBk.slice(0,2).forEach(b=>{const p=document.createElement('div');p.className='slot-pill partial';p.textContent=b.startTime+'-'+b.endTime;pills.appendChild(p);});
+          if(dayBk.length>2){const m2=document.createElement('div');m2.className='more-lbl';m2.textContent='+'+(dayBk.length-2)+' 筆';pills.appendChild(m2);}
+        }
+      }else if(!past){const p=document.createElement('div');p.className='slot-pill available';p.textContent='空閒';pills.appendChild(p);}
+      el.appendChild(pills);
+      if(!past)el.addEventListener('click',()=>selDate(ds));
+    }
+    g.appendChild(el);
+  }
+}
+
+function cntSlots(bks){const s=new Set();bks.forEach(b=>slots(b.startTime,b.endTime).forEach(t=>s.add(t)));return s.size;}
+function slots(s,e){const r=[];let c=t2m(s),em=t2m(e);while(c<em){r.push(m2t(c));c+=SLOT_MIN;}return r;}
+
+function selDate(ds){S.selDate=ds;renderCal();renderDayPanel(ds);}
+
+function renderDayPanel(ds){
+  const p=document.getElementById('dayPanel');p.classList.add('show');
+  p.scrollIntoView({behavior:'smooth',block:'nearest'});
+  const[y,m,d]=ds.split('-').map(Number);
+  const dow=['日','一','二','三','四','五','六'][new Date(y,m-1,d).getDay()];
+  document.getElementById('dayPanelTitle').textContent=y+' 年 '+m+' 月 '+d+' 日（星期'+dow+'）';
+  renderTimeline(ds);renderBkList(ds);
+}
+
+function renderTimeline(ds){
+  const tl=document.getElementById('timeline');tl.innerHTML='';
+  const occ=new Set();
+  S.roomBk.filter(b=>b.date===ds).forEach(b=>slots(b.startTime,b.endTime).forEach(s=>occ.add(s)));
+  TIMES.slice(0,-1).forEach(t=>{
+    const tak=occ.has(t),col=document.createElement('div');
+    col.className='ts '+(tak?'taken':'free');
+    col.innerHTML='<div class="ts-time">'+t+'</div><div class="ts-body"><div class="ts-dot"></div></div>';
+    tl.appendChild(col);
+  });
+}
+
+function renderBkList(ds){
+  const lst=document.getElementById('bookingList');
+  const bk=S.roomBk.filter(b=>b.date===ds).sort((a,b)=>a.startTime.localeCompare(b.startTime));
+  if(!bk.length){lst.innerHTML='<div class="empty-state"><div class="icon">📅</div>此日尚無借用紀錄</div>';return;}
+  lst.innerHTML='<div class="bk-title">當日會議室借用紀錄</div>';
+  bk.forEach(b=>{
+    const it=document.createElement('div');
+    it.className='bk-item';
+    const isPast=new Date(b.date)<TODAY;
+    const cancelBtn=document.createElement('button');
+    cancelBtn.className='btn-cancel-bk';
+    cancelBtn.textContent='✕ 取消借用';
+    cancelBtn.onclick=()=>openCancelModal(b.id,'room');
+    it.innerHTML='<div class="bk-time">'+b.startTime+' – '+b.endTime+'</div>'
+      +'<div class="bk-info">'+b.empName+'（'+b.empDept+'）'+(b.purpose?'・'+b.purpose:'')+'</div>'
+      +(b.needLaptop==='是'?'<span class="badge badge-lp">💻 含筆電</span>':'')
+      +'<span class="badge badge-room">🏢 會議室</span>';
+    if(!isPast)it.appendChild(cancelBtn);
+    lst.appendChild(it);
+  });
+}
+
+/* 筆電區塊 */
+function changeLaptopMonth(dir){
+  S.lpM+=dir;
+  if(S.lpM>11){S.lpM=0;S.lpY++;}
+  if(S.lpM<0){S.lpM=11;S.lpY--;}
+  renderLpCal();
+}
+
+function renderLpDateRow(){} // 保留避免錯誤（已改為 renderLpCal）
+
+function renderLpCal(){
+  const y=S.lpY,m=S.lpM;
+  document.getElementById('laptopMonthLabel').textContent=y+' 年 '+(m+1)+' 月';
+  const g=document.getElementById('lpCalGrid');
+  if(!g)return;
+  g.innerHTML='';
+  ['日','一','二','三','四','五','六'].forEach((d,i)=>{
+    const el=document.createElement('div');
+    el.className='cal-weekday'+(i===0||i===6?' wk':'');
+    el.textContent=d;g.appendChild(el);
+  });
+  const first=new Date(y,m,1).getDay();
+  const days=new Date(y,m+1,0).getDate();
+  for(let i=0;i<first;i++){const e=document.createElement('div');e.className='cal-day empty';g.appendChild(e);}
+  for(let d=1;d<=days;d++){
+    const dt=new Date(y,m,d),dow=dt.getDay();
+    const wk=dow===0||dow===6,past=dt<TODAY;
+    const ds=fmtDate(y,m+1,d),isTd=ds===todayStr,isSel=ds===S.lpDate;
+    const el=document.createElement('div');
+    let cls='cal-day';
+    if(wk)cls+=' wkend';else if(past)cls+=' past';
+    if(isTd)cls+=' lp-today';if(isSel)cls+=' lp-selected';
+    el.className=cls;
+    const num=document.createElement('div');num.className='day-num';num.textContent=d;el.appendChild(num);
+    if(!wk){
+      const dayBk=S.laptopBk.filter(b=>b.date===ds);
+      const pills=document.createElement('div');pills.className='slot-pills';
+      if(dayBk.length){
+        const tot=(WORK_END-WORK_START)*2,used=cntSlots(dayBk);
+        if(used>=tot){
+          const p=document.createElement('div');p.className='slot-pill';
+          p.style.cssText='background:#ddd6fe;color:#5b21b6';p.textContent='全天借用';pills.appendChild(p);
+        }else{
+          dayBk.slice(0,2).forEach(b=>{
+            const p=document.createElement('div');p.className='slot-pill';
+            p.style.cssText='background:#ede9fe;color:#6d28d9';
+            p.textContent=b.startTime+'-'+b.endTime;pills.appendChild(p);
+          });
+          if(dayBk.length>2){const m2=document.createElement('div');m2.className='more-lbl';m2.textContent='+'+(dayBk.length-2)+' 筆';pills.appendChild(m2);}
+        }
+      }else if(!past){
+        const p=document.createElement('div');p.className='slot-pill';
+        p.style.cssText='background:#f5f3ff;color:#7c3aed';p.textContent='空閒';pills.appendChild(p);
+      }
+      el.appendChild(pills);
+      if(!past)el.addEventListener('click',()=>selLpDate(ds));
+    }
+    g.appendChild(el);
+  }
+}
+
+function selLpDate(ds){
+  S.lpDate=ds;
+  renderLpCal();
+  renderLpDayPanel(ds);
+}
+
+function renderLpDayPanel(ds){
+  const p=document.getElementById('lpDayPanel');
+  if(!p)return;
+  p.classList.add('show');
+  p.scrollIntoView({behavior:'smooth',block:'nearest'});
+  const[y,m,d]=ds.split('-').map(Number);
+  const dow=['日','一','二','三','四','五','六'][new Date(y,m-1,d).getDay()];
+  document.getElementById('lpDayPanelTitle').textContent=y+' 年 '+m+' 月 '+d+' 日（星期'+dow+'）';
+  renderLpTimeline();renderLpBkList();
+}
+
+function renderLpView(){renderLpCal();renderLpTimeline();renderLpBkList();}
+
+function renderLpTimeline(){
+  const tl=document.getElementById('laptopTimeline');tl.innerHTML='';
+  const occ=new Set();
+  S.laptopBk.filter(b=>b.date===S.lpDate).forEach(b=>slots(b.startTime,b.endTime).forEach(s=>occ.add(s)));
+  TIMES.slice(0,-1).forEach(t=>{
+    const tak=occ.has(t),col=document.createElement('div');
+    col.className='ts '+(tak?'lp-taken':'lp-free');
+    col.innerHTML='<div class="ts-time">'+t+'</div><div class="ts-body"><div class="ts-dot"></div></div>';
+    tl.appendChild(col);
+  });
+}
+
+function renderLpBkList(){
+  const lst=document.getElementById('laptopBookingList');
+  const bk=S.laptopBk.filter(b=>b.date===S.lpDate).sort((a,b)=>a.startTime.localeCompare(b.startTime));
+  if(!bk.length){lst.innerHTML='<div class="empty-state"><div class="icon">💻</div>此日筆電尚無借用紀錄</div>';return;}
+  lst.innerHTML='<div class="bk-title">當日筆電借用紀錄</div>';
+  bk.forEach(b=>{
+    const it=document.createElement('div');
+    it.className='bk-item lp';
+    const lbl=b.type==='laptop'?'💻 單獨借用':'🏢 隨會議室借用';
+    const isPast=new Date(b.date)<TODAY;
+    const cancelBtn=document.createElement('button');
+    cancelBtn.className='btn-cancel-bk lp';
+    cancelBtn.textContent='✕ 取消借用';
+    cancelBtn.onclick=()=>openCancelModal(b.id,'laptop');
+    it.innerHTML='<div class="bk-time">'+b.startTime+' – '+b.endTime+'</div>'
+      +'<div class="bk-info">'+b.empName+'（'+b.empDept+'）'+(b.purpose?'・'+b.purpose:'')+'</div>'
+      +'<span class="badge badge-lp">'+lbl+'</span>';
+    if(!isPast)it.appendChild(cancelBtn);
+    lst.appendChild(it);
+  });
+}
+
+/* 會議室 Modal */
+function openRoomModal(){
+  if(!S.selDate){toast('請先選擇日期','error');return;}
+  const[y,m,d]=S.selDate.split('-').map(Number);
+  const dow=['日','一','二','三','四','五','六'][new Date(y,m-1,d).getDay()];
+  document.getElementById('roomSummary').innerHTML=
+    '<div class="s-row"><div class="s-lbl">借用日期</div><div class="s-val">'+y+'年'+m+'月'+d+'日（星期'+dow+'）</div></div>'
+    +'<div class="s-row"><div class="s-lbl">地點</div><div class="s-val">教學研究部會議室</div></div>';
+  fillSelects('r',S.selDate,S.roomBk);
+  document.getElementById('roomModal').classList.add('show');
+  document.getElementById('rConflict').classList.remove('show');
+}
+function closeRoomModal(){document.getElementById('roomModal').classList.remove('show');clearForm('r');}
+
+async function submitRoom(){
+  if(!chkFields(['rEmpId','rEmpName','rEmpDept','rEmpPhone','rIdCode']))return;
+  const idCode=gv('rIdCode');
+  if(idCode.length!==4){toast('身份證後4碼請輸入4位','error');return;}
+  const st=document.getElementById('rStart').value,en=document.getElementById('rEnd').value;
+  if(t2m(st)>=t2m(en)){toast('結束時間必須晚於開始時間','error');return;}
+  const req=slots(st,en);
+  if(S.roomBk.filter(b=>b.date===S.selDate).some(b=>slots(b.startTime,b.endTime).some(s=>req.includes(s)))){
+    document.getElementById('rConflict').classList.add('show');toast('所選時段衝突','error');return;
+  }
+  const nl=document.getElementById('rNeedLaptop').checked;
+  if(nl&&S.laptopBk.filter(b=>b.date===S.selDate).some(b=>slots(b.startTime,b.endTime).some(s=>req.includes(s)))){
+    toast('此時段筆電已被借用','error');return;
+  }
+  document.getElementById('rSubmitBtn').disabled=true;
+  showLoad('送出申請中…');
+  try{
+    const r=await apiCall({action:'book',type:'room',date:S.selDate,startTime:st,endTime:en,
+      empId:gv('rEmpId'),empName:gv('rEmpName'),empDept:gv('rEmpDept'),empPhone:gv('rEmpPhone'),
+      purpose:gv('rPurpose'),needLaptop:nl?'是':'否',idCode:idCode});
+    if(r&&r.status==='ok'){closeRoomModal();toast('✅ 會議室借用申請成功！','success');await loadAll();}
+    else toast('送出失敗：'+(r&&r.message?r.message:'請稍後再試'),'error');
+  }catch(e){toast('連線失敗，請稍後再試','error');}
+  finally{hideLoad();document.getElementById('rSubmitBtn').disabled=false;}
+}
+
+/* 筆電 Modal */
+function openLaptopModal(){
+  if(!S.lpDate){toast('請先選擇日期','error');return;}
+  const[y,m,d]=S.lpDate.split('-').map(Number);
+  const dow=['日','一','二','三','四','五','六'][new Date(y,m-1,d).getDay()];
+  document.getElementById('lpSummary').innerHTML=
+    '<div class="s-row"><div class="s-lbl">借用日期</div><div class="s-val">'+y+'年'+m+'月'+d+'日（星期'+dow+'）</div></div>'
+    +'<div class="s-row"><div class="s-lbl">設備</div><div class="s-val">💻 教學研究部筆記型電腦</div></div>';
+  fillSelects('lp',S.lpDate,S.laptopBk);
+  document.getElementById('laptopModal').classList.add('show');
+  document.getElementById('lpConflict').classList.remove('show');
+}
+function closeLaptopModal(){document.getElementById('laptopModal').classList.remove('show');clearForm('lp');}
+
+async function submitLaptop(){
+  if(!chkFields(['lpEmpId','lpEmpName','lpEmpDept','lpEmpPhone','lpIdCode']))return;
+  const idCode=gv('lpIdCode');
+  if(idCode.length!==4){toast('身份證後4碼請輸入4位','error');return;}
+  const st=document.getElementById('lpStart').value,en=document.getElementById('lpEnd').value;
+  if(t2m(st)>=t2m(en)){toast('結束時間必須晚於開始時間','error');return;}
+  const req=slots(st,en);
+  if(S.laptopBk.filter(b=>b.date===S.lpDate).some(b=>slots(b.startTime,b.endTime).some(s=>req.includes(s)))){
+    document.getElementById('lpConflict').classList.add('show');toast('所選時段筆電已被借用','error');return;
+  }
+  document.getElementById('lpSubmitBtn').disabled=true;
+  showLoad('送出申請中…');
+  try{
+    const r=await apiCall({action:'book',type:'laptop',date:S.lpDate,startTime:st,endTime:en,
+      empId:gv('lpEmpId'),empName:gv('lpEmpName'),empDept:gv('lpEmpDept'),empPhone:gv('lpEmpPhone'),
+      purpose:gv('lpPurpose'),needLaptop:'是',idCode:idCode});
+    if(r&&r.status==='ok'){closeLaptopModal();toast('✅ 筆電借用申請成功！','success');await loadAll();}
+    else toast('送出失敗：'+(r&&r.message?r.message:'請稍後再試'),'error');
+  }catch(e){toast('連線失敗，請稍後再試','error');}
+  finally{hideLoad();document.getElementById('lpSubmitBtn').disabled=false;}
+}
+
+/* 共用：填時間選單 */
+function fillSelects(prefix,dateStr,bkList){
+  const startEl=document.getElementById(prefix+'Start');
+  const endEl=document.getElementById(prefix+'End');
+  const occ=new Set();
+  bkList.filter(b=>b.date===dateStr).forEach(b=>slots(b.startTime,b.endTime).forEach(s=>occ.add(s)));
+  startEl.innerHTML='';
+  TIMES.slice(0,-1).forEach(t=>{
+    const o=document.createElement('option');o.value=t;o.textContent=t;
+    if(occ.has(t)){o.disabled=true;o.textContent+=' (已借用)';}
+    startEl.appendChild(o);
+  });
+  const firstAvail=TIMES.find(t=>!occ.has(t));
+  if(firstAvail)startEl.value=firstAvail;
+  const updEnd=()=>{
+    const sm=t2m(startEl.value);
+    const dayBk=bkList.filter(b=>b.date===dateStr);
+    endEl.innerHTML='';
+    TIMES.filter(t=>t2m(t)>sm).forEach(t=>{
+      const sl=slots(startEl.value,t);
+      const blk=dayBk.some(b=>slots(b.startTime,b.endTime).some(s=>sl.includes(s)));
+      const o=document.createElement('option');o.value=t;o.textContent=t;
+      if(blk){o.disabled=true;o.textContent+=' (衝突)';}
+      endEl.appendChild(o);
+    });
+  };
+  startEl.onchange=updEnd;updEnd();
+}
+
+/* 取消借用 */
+let cancelTarget={id:null,type:null};
+
+function openCancelModal(id,type){
+  cancelTarget={id,type};
+  const all=[...S.roomBk,...S.laptopBk];
+  const b=all.find(x=>x.id===id);
+  if(!b){toast('找不到借用資料','error');return;}
+  const[y,m,d]=b.date.split('-').map(Number);
+  const dow=['日','一','二','三','四','五','六'][new Date(y,m-1,d).getDay()];
+  const typeLabel=type==='room'?'🏢 會議室':'💻 筆電';
+  document.getElementById('cancelSummary').innerHTML=
+    '<div class="s-row"><div class="s-lbl">借用類型</div><div class="s-val">'+typeLabel+'</div></div>'
+    +'<div class="s-row"><div class="s-lbl">日期</div><div class="s-val">'+y+'年'+m+'月'+d+'日（星期'+dow+'）</div></div>'
+    +'<div class="s-row"><div class="s-lbl">時段</div><div class="s-val">'+b.startTime+' – '+b.endTime+'</div></div>'
+    +'<div class="s-row"><div class="s-lbl">借用人</div><div class="s-val">'+b.empName+'（'+b.empDept+'）</div></div>';
+  document.getElementById('cancelEmpId').value='';
+  document.getElementById('cancelIdCode').value='';
+  document.getElementById('cancelErrMsg').classList.remove('show');
+  document.getElementById('cancelModal').classList.add('show');
+}
+function closeCancelModal(){document.getElementById('cancelModal').classList.remove('show');}
+
+async function confirmCancel(){
+  const empId=document.getElementById('cancelEmpId').value.trim();
+  const idCode=document.getElementById('cancelIdCode').value.trim();
+  if(!empId||!idCode){toast('請填寫人事號與身份證後4碼','error');return;}
+  if(idCode.length!==4){toast('身份證後4碼請輸入4位','error');return;}
+  document.getElementById('cancelConfirmBtn').disabled=true;
+  showLoad('驗證中…');
+  try{
+    const data=await apiCall({action:'cancel',id:cancelTarget.id,empId,idCode});
+    if(data&&data.status==='ok'){
+      closeCancelModal();toast('✅ 借用已成功取消！','success');await loadAll();
+    }else{
+      document.getElementById('cancelErrMsg').classList.add('show');
+      toast((data&&data.message?data.message:'驗證失敗'),'error');
+    }
+  }catch(e){toast('連線失敗，請稍後再試','error');}
+  finally{hideLoad();document.getElementById('cancelConfirmBtn').disabled=false;}
+}
+
+/* 共用工具 */
+function chkFields(ids){
+  let ok=true;
+  ids.forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el||!el.value.trim()){if(el)el.classList.add('err');ok=false;}
+    else el.classList.remove('err');
+  });
+  if(!ok)toast('請填寫所有必填欄位','error');
+  return ok;
+}
+function clearForm(p){
+  [p+'EmpId',p+'EmpName',p+'EmpDept',p+'EmpPhone',p+'IdCode',p+'Purpose'].forEach(id=>{
+    const el=document.getElementById(id);if(el){el.value='';el.classList.remove('err');}
+  });
+  if(p==='r'){
+    document.getElementById('rNeedLaptop').checked=false;
+    document.getElementById('rConflict').classList.remove('show');
+  }else{
+    document.getElementById('lpConflict').classList.remove('show');
+  }
+}
+function showLoad(msg){document.getElementById('loadingText').textContent=msg;document.getElementById('loadingOverlay').classList.add('show');}
+function hideLoad(){document.getElementById('loadingOverlay').classList.remove('show');}
+let _tt;
+function toast(msg,type='success'){
+  const t=document.getElementById('toast');t.textContent=msg;t.className='toast show '+type;
+  clearTimeout(_tt);_tt=setTimeout(()=>t.classList.remove('show'),3500);
+}
+
+init();
+</script>
+
+<!-- ===== 取消借用 Modal ===== -->
+<div class="modal-overlay" id="cancelModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">🗑️ 取消借用</div>
+      <button class="modal-close" onclick="closeCancelModal()">&#215;</button>
+    </div>
+    <div class="modal-body">
+      <div class="summary-box" id="cancelSummary" style="background:#fff5f5;border-color:#fecaca;"></div>
+      <div class="f-section">
+        <div class="f-title" style="color:var(--danger);border-bottom-color:#fee2e2;">身份驗證</div>
+        <div class="f-row">
+          <div class="f-group">
+            <label class="f-label">人事號 <span class="req">*</span></label>
+            <input class="f-input" id="cancelEmpId" type="text" placeholder="請輸入借用時填寫的人事號">
+          </div>
+          <div class="f-group">
+            <label class="f-label">身份證後4碼 <span class="req">*</span></label>
+            <input class="f-input" id="cancelIdCode" type="text" maxlength="4" placeholder="請輸入借用時填寫的後4碼">
+          </div>
+        </div>
+        <div class="err-msg" id="cancelErrMsg">⚠️ 人事號或身份證後4碼不正確。</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-sec" onclick="closeCancelModal()">返回</button>
+      <button class="btn" id="cancelConfirmBtn" onclick="confirmCancel()"
+        style="background:var(--danger);color:#fff;">確認取消借用</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>
