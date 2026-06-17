@@ -119,6 +119,9 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
 .lp-date-chip:hover{border-color:var(--laptop);color:var(--laptop);}
 .lp-date-chip.sel{background:var(--laptop);color:#fff;border-color:var(--laptop);}
 .lp-date-chip.has-bk{border-color:#c4b5fd;color:var(--laptop);}
+.cal-day.lp-today{border-color:var(--laptop);border-width:2px;}
+.cal-day.lp-today .day-num{background:var(--laptop);color:#fff;}
+.cal-day.lp-selected{border-color:var(--laptop);background:var(--laptop-light);}
 
 /* Modal */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:none;align-items:center;justify-content:center;padding:var(--sp-md);}
@@ -276,8 +279,9 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
   <!-- ===== 筆電 ===== -->
   <div id="laptopSection" style="display:none;">
     <div class="info-banner lp">
-      💻 筆記型電腦借用：週一至週五 08:00–17:00，每次最小單位 30 分鐘。請選擇日期後申請。
+      💻 筆記型電腦借用：週一至週五 08:00–17:00，每次最小單位 30 分鐘。點選日期可查看詳細時段並申請。
     </div>
+
     <div class="card">
       <div class="cal-header">
         <div class="cal-nav">
@@ -285,9 +289,21 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
           <div class="cal-month-lbl" id="laptopMonthLabel"></div>
           <button class="cal-nav-btn" onclick="changeLaptopMonth(1)">&#8250;</button>
         </div>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#f5f3ff;border:1px solid #c4b5fd"></div>空閒</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#ede9fe;border:1px solid #a78bfa"></div>部分借用</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#ddd6fe;border:1px solid #7c3aed"></div>全天借用</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#7c3aed;border-radius:50%"></div>今天</div>
+        </div>
+      </div>
+      <div class="cal-grid" id="lpCalGrid"></div>
+    </div>
+
+    <div class="card day-panel" id="lpDayPanel">
+      <div class="day-panel-header">
+        <div class="day-panel-title" id="lpDayPanelTitle">—</div>
         <button class="btn-book lp" onclick="openLaptopModal()">＋ 申請借用筆電</button>
       </div>
-      <div class="lp-date-row" id="laptopDateRow"></div>
       <div class="timeline-wrap"><div class="timeline" id="laptopTimeline"></div></div>
       <div class="bk-list" id="laptopBookingList"></div>
     </div>
@@ -434,7 +450,7 @@ const S={
 /* 初始化 */
 async function init(){
   renderCal();
-  renderLpDateRow();
+  renderLpCal();
   await loadAll();
 }
 
@@ -582,30 +598,80 @@ function changeLaptopMonth(dir){
   S.lpM+=dir;
   if(S.lpM>11){S.lpM=0;S.lpY++;}
   if(S.lpM<0){S.lpM=11;S.lpY--;}
-  renderLpDateRow();renderLpView();
+  renderLpCal();
 }
 
-function renderLpDateRow(){
-  document.getElementById('laptopMonthLabel').textContent=S.lpY+' 年 '+(S.lpM+1)+' 月';
-  const row=document.getElementById('laptopDateRow');row.innerHTML='';
-  const days=new Date(S.lpY,S.lpM+1,0).getDate();
-  const wdMap='一二三四五';
+function renderLpDateRow(){} // 保留避免錯誤（已改為 renderLpCal）
+
+function renderLpCal(){
+  const y=S.lpY,m=S.lpM;
+  document.getElementById('laptopMonthLabel').textContent=y+' 年 '+(m+1)+' 月';
+  const g=document.getElementById('lpCalGrid');
+  if(!g)return;
+  g.innerHTML='';
+  ['日','一','二','三','四','五','六'].forEach((d,i)=>{
+    const el=document.createElement('div');
+    el.className='cal-weekday'+(i===0||i===6?' wk':'');
+    el.textContent=d;g.appendChild(el);
+  });
+  const first=new Date(y,m,1).getDay();
+  const days=new Date(y,m+1,0).getDate();
+  for(let i=0;i<first;i++){const e=document.createElement('div');e.className='cal-day empty';g.appendChild(e);}
   for(let d=1;d<=days;d++){
-    const dt=new Date(S.lpY,S.lpM,d),dow=dt.getDay();
-    if(dow===0||dow===6||dt<TODAY)continue;
-    const ds=fmtDate(S.lpY,S.lpM+1,d);
-    const hasBk=S.laptopBk.some(b=>b.date===ds);
-    const chip=document.createElement('div');
-    let cls='lp-date-chip';
-    if(ds===S.lpDate)cls+=' sel';else if(hasBk)cls+=' has-bk';
-    chip.className=cls;
-    chip.textContent=(S.lpM+1)+'/'+d+'（'+wdMap[dow-1]+'）';
-    chip.addEventListener('click',()=>{S.lpDate=ds;renderLpDateRow();renderLpView();});
-    row.appendChild(chip);
+    const dt=new Date(y,m,d),dow=dt.getDay();
+    const wk=dow===0||dow===6,past=dt<TODAY;
+    const ds=fmtDate(y,m+1,d),isTd=ds===todayStr,isSel=ds===S.lpDate;
+    const el=document.createElement('div');
+    let cls='cal-day';
+    if(wk)cls+=' wkend';else if(past)cls+=' past';
+    if(isTd)cls+=' lp-today';if(isSel)cls+=' lp-selected';
+    el.className=cls;
+    const num=document.createElement('div');num.className='day-num';num.textContent=d;el.appendChild(num);
+    if(!wk){
+      const dayBk=S.laptopBk.filter(b=>b.date===ds);
+      const pills=document.createElement('div');pills.className='slot-pills';
+      if(dayBk.length){
+        const tot=(WORK_END-WORK_START)*2,used=cntSlots(dayBk);
+        if(used>=tot){
+          const p=document.createElement('div');p.className='slot-pill';
+          p.style.cssText='background:#ddd6fe;color:#5b21b6';p.textContent='全天借用';pills.appendChild(p);
+        }else{
+          dayBk.slice(0,2).forEach(b=>{
+            const p=document.createElement('div');p.className='slot-pill';
+            p.style.cssText='background:#ede9fe;color:#6d28d9';
+            p.textContent=b.startTime+'-'+b.endTime;pills.appendChild(p);
+          });
+          if(dayBk.length>2){const m2=document.createElement('div');m2.className='more-lbl';m2.textContent='+'+(dayBk.length-2)+' 筆';pills.appendChild(m2);}
+        }
+      }else if(!past){
+        const p=document.createElement('div');p.className='slot-pill';
+        p.style.cssText='background:#f5f3ff;color:#7c3aed';p.textContent='空閒';pills.appendChild(p);
+      }
+      el.appendChild(pills);
+      if(!past)el.addEventListener('click',()=>selLpDate(ds));
+    }
+    g.appendChild(el);
   }
 }
 
-function renderLpView(){renderLpTimeline();renderLpBkList();}
+function selLpDate(ds){
+  S.lpDate=ds;
+  renderLpCal();
+  renderLpDayPanel(ds);
+}
+
+function renderLpDayPanel(ds){
+  const p=document.getElementById('lpDayPanel');
+  if(!p)return;
+  p.classList.add('show');
+  p.scrollIntoView({behavior:'smooth',block:'nearest'});
+  const[y,m,d]=ds.split('-').map(Number);
+  const dow=['日','一','二','三','四','五','六'][new Date(y,m-1,d).getDay()];
+  document.getElementById('lpDayPanelTitle').textContent=y+' 年 '+m+' 月 '+d+' 日（星期'+dow+'）';
+  renderLpTimeline();renderLpBkList();
+}
+
+function renderLpView(){renderLpCal();renderLpTimeline();renderLpBkList();}
 
 function renderLpTimeline(){
   const tl=document.getElementById('laptopTimeline');tl.innerHTML='';
