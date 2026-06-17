@@ -332,6 +332,12 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
   .f-select{height:44px;}
   .cal-nav-btn{width:36px;height:36px;}
 }
+
+/* 國定假日樣式 */
+.cal-day.holiday{background:#fef2f2;cursor:default;}
+.cal-day.holiday .day-num{color:#dc2626;}
+.cal-day.holiday.today .day-num,.cal-day.holiday.lp-today .day-num{background:#dc2626;color:#fff;}
+.slot-pill.holiday-tag{background:#fee2e2;color:#b91c1c;font-weight:700;}
 </style>
 </head>
 <body>
@@ -571,6 +577,7 @@ const S={
   lpY:TODAY.getFullYear(),lpM:TODAY.getMonth(),
   lpDate:todayStr,
   roomBk:[],laptopBk:[],
+  holidays:new Set(),
 };
 
 /* 初始化 */
@@ -610,7 +617,13 @@ function apiCall(params){
 async function loadAll(){
   showLoad('載入借用資料中…');
   try{
-    const d=await apiCall({action:'list'});
+    const[d,h]=await Promise.all([
+      apiCall({action:'list'}),
+      apiCall({action:'holidays'}).catch(()=>({status:'error'}))
+    ]);
+    if(h&&h.status==='ok'){
+      S.holidays=new Set(h.holidays||[]);
+    }
     if(d&&d.status==='ok'){
       const all=d.bookings||[];
       S.roomBk=all.filter(b=>b.type==='room');
@@ -645,27 +658,36 @@ function renderCal(){
   for(let i=0;i<first;i++){const e=document.createElement('div');e.className='cal-day empty';g.appendChild(e);}
   for(let d=1;d<=days;d++){
     const dt=new Date(y,m,d),dow=dt.getDay();
+    const ds=fmtDate(y,m+1,d);
+    const isHol=S.holidays.has(ds);
     const wk=dow===0||dow===6,past=dt<TODAY;
-    const ds=fmtDate(y,m+1,d),isTd=ds===todayStr,isSel=ds===S.selDate;
+    const isTd=ds===todayStr,isSel=ds===S.selDate;
     const el=document.createElement('div');
     let cls='cal-day';
+    if(isHol)cls+=' holiday';
     if(wk)cls+=' wkend';else if(past)cls+=' past';
     if(isTd)cls+=' today';if(isSel)cls+=' selected';
     el.className=cls;
     const num=document.createElement('div');num.className='day-num';num.textContent=d;el.appendChild(num);
     if(!wk){
-      const dayBk=S.roomBk.filter(b=>b.date===ds);
-      const pills=document.createElement('div');pills.className='slot-pills';
-      if(dayBk.length){
-        const tot=(WORK_END-WORK_START)*2,used=cntSlots(dayBk);
-        if(used>=tot){const p=document.createElement('div');p.className='slot-pill booked';p.textContent='全天借用';pills.appendChild(p);}
-        else{
-          dayBk.slice(0,2).forEach(b=>{const p=document.createElement('div');p.className='slot-pill partial';p.textContent=b.startTime+'-'+b.endTime;pills.appendChild(p);});
-          if(dayBk.length>2){const m2=document.createElement('div');m2.className='more-lbl';m2.textContent='+'+(dayBk.length-2)+' 筆';pills.appendChild(m2);}
-        }
-      }else if(!past){const p=document.createElement('div');p.className='slot-pill available';p.textContent='空閒';pills.appendChild(p);}
-      el.appendChild(pills);
-      if(!past)el.addEventListener('click',()=>selDate(ds));
+      if(isHol){
+        const p=document.createElement('div');p.className='slot-pills';
+        const tag=document.createElement('div');tag.className='slot-pill holiday-tag';tag.textContent='🎌 假日';
+        p.appendChild(tag);el.appendChild(p);
+      }else{
+        const dayBk=S.roomBk.filter(b=>b.date===ds);
+        const pills=document.createElement('div');pills.className='slot-pills';
+        if(dayBk.length){
+          const tot=(WORK_END-WORK_START)*2,used=cntSlots(dayBk);
+          if(used>=tot){const p=document.createElement('div');p.className='slot-pill booked';p.textContent='全天借用';pills.appendChild(p);}
+          else{
+            dayBk.slice(0,2).forEach(b=>{const p=document.createElement('div');p.className='slot-pill partial';p.textContent=b.startTime+'-'+b.endTime;pills.appendChild(p);});
+            if(dayBk.length>2){const m2=document.createElement('div');m2.className='more-lbl';m2.textContent='+'+(dayBk.length-2)+' 筆';pills.appendChild(m2);}
+          }
+        }else if(!past){const p=document.createElement('div');p.className='slot-pill available';p.textContent='空閒';pills.appendChild(p);}
+        el.appendChild(pills);
+      }
+      if(!past&&!isHol)el.addEventListener('click',()=>selDate(ds));
     }
     g.appendChild(el);
   }
@@ -745,36 +767,45 @@ function renderLpCal(){
   for(let i=0;i<first;i++){const e=document.createElement('div');e.className='cal-day empty';g.appendChild(e);}
   for(let d=1;d<=days;d++){
     const dt=new Date(y,m,d),dow=dt.getDay();
+    const ds=fmtDate(y,m+1,d);
+    const isHol=S.holidays.has(ds);
     const wk=dow===0||dow===6,past=dt<TODAY;
-    const ds=fmtDate(y,m+1,d),isTd=ds===todayStr,isSel=ds===S.lpDate;
+    const isTd=ds===todayStr,isSel=ds===S.lpDate;
     const el=document.createElement('div');
     let cls='cal-day';
+    if(isHol)cls+=' holiday';
     if(wk)cls+=' wkend';else if(past)cls+=' past';
     if(isTd)cls+=' lp-today';if(isSel)cls+=' lp-selected';
     el.className=cls;
     const num=document.createElement('div');num.className='day-num';num.textContent=d;el.appendChild(num);
     if(!wk){
-      const dayBk=S.laptopBk.filter(b=>b.date===ds);
-      const pills=document.createElement('div');pills.className='slot-pills';
-      if(dayBk.length){
-        const tot=(WORK_END-WORK_START)*2,used=cntSlots(dayBk);
-        if(used>=tot){
-          const p=document.createElement('div');p.className='slot-pill';
-          p.style.cssText='background:#ddd6fe;color:#5b21b6';p.textContent='全天借用';pills.appendChild(p);
-        }else{
-          dayBk.slice(0,2).forEach(b=>{
+      if(isHol){
+        const p=document.createElement('div');p.className='slot-pills';
+        const tag=document.createElement('div');tag.className='slot-pill holiday-tag';tag.textContent='🎌 假日';
+        p.appendChild(tag);el.appendChild(p);
+      }else{
+        const dayBk=S.laptopBk.filter(b=>b.date===ds);
+        const pills=document.createElement('div');pills.className='slot-pills';
+        if(dayBk.length){
+          const tot=(WORK_END-WORK_START)*2,used=cntSlots(dayBk);
+          if(used>=tot){
             const p=document.createElement('div');p.className='slot-pill';
-            p.style.cssText='background:#ede9fe;color:#6d28d9';
-            p.textContent=b.startTime+'-'+b.endTime;pills.appendChild(p);
-          });
-          if(dayBk.length>2){const m2=document.createElement('div');m2.className='more-lbl';m2.textContent='+'+(dayBk.length-2)+' 筆';pills.appendChild(m2);}
+            p.style.cssText='background:#ddd6fe;color:#5b21b6';p.textContent='全天借用';pills.appendChild(p);
+          }else{
+            dayBk.slice(0,2).forEach(b=>{
+              const p=document.createElement('div');p.className='slot-pill';
+              p.style.cssText='background:#ede9fe;color:#6d28d9';
+              p.textContent=b.startTime+'-'+b.endTime;pills.appendChild(p);
+            });
+            if(dayBk.length>2){const m2=document.createElement('div');m2.className='more-lbl';m2.textContent='+'+(dayBk.length-2)+' 筆';pills.appendChild(m2);}
+          }
+        }else if(!past){
+          const p=document.createElement('div');p.className='slot-pill';
+          p.style.cssText='background:#f5f3ff;color:#7c3aed';p.textContent='空閒';pills.appendChild(p);
         }
-      }else if(!past){
-        const p=document.createElement('div');p.className='slot-pill';
-        p.style.cssText='background:#f5f3ff;color:#7c3aed';p.textContent='空閒';pills.appendChild(p);
+        el.appendChild(pills);
       }
-      el.appendChild(pills);
-      if(!past)el.addEventListener('click',()=>selLpDate(ds));
+      if(!past&&!isHol)el.addEventListener('click',()=>selLpDate(ds));
     }
     g.appendChild(el);
   }
@@ -848,6 +879,7 @@ function openRoomModal(){
 function closeRoomModal(){document.getElementById('roomModal').classList.remove('show');clearForm('r');}
 
 async function submitRoom(){
+  if(S.holidays.has(S.selDate)){toast('該日為國定假日，不開放借用','error');return;}
   if(!chkFields(['rEmpId','rEmpName','rEmpDept','rEmpPhone','rIdCode']))return;
   const idCode=gv('rIdCode');
   if(idCode.length!==4){toast('身份證後4碼請輸入4位','error');return;}
@@ -888,6 +920,7 @@ function openLaptopModal(){
 function closeLaptopModal(){document.getElementById('laptopModal').classList.remove('show');clearForm('lp');}
 
 async function submitLaptop(){
+  if(S.holidays.has(S.lpDate)){toast('該日為國定假日，不開放借用','error');return;}
   if(!chkFields(['lpEmpId','lpEmpName','lpEmpDept','lpEmpPhone','lpIdCode']))return;
   const idCode=gv('lpIdCode');
   if(idCode.length!==4){toast('身份證後4碼請輸入4位','error');return;}
