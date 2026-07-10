@@ -338,6 +338,14 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
 .cal-day.holiday .day-num{color:#dc2626;}
 .cal-day.holiday.today .day-num,.cal-day.holiday.lp-today .day-num{background:#dc2626;color:#fff;}
 .slot-pill.holiday-tag{background:#fee2e2;color:#b91c1c;font-weight:700;}
+
+/* 用途選擇卡片 */
+.purpose-cards{display:flex;gap:var(--sp-sm);flex-direction:column;}
+.purpose-card{display:flex;align-items:flex-start;gap:var(--sp-sm);padding:var(--sp-md);border:2px solid var(--border);border-radius:var(--r-md);cursor:pointer;transition:all .15s;background:var(--surface2);}
+.purpose-card:has(input:checked){border-color:var(--laptop);background:var(--laptop-light);}
+.purpose-card input{width:16px;height:16px;margin-top:2px;accent-color:var(--laptop);flex-shrink:0;}
+.purpose-card-title{font-size:14px;font-weight:600;}
+.purpose-card-desc{font-size:12px;color:var(--text3);margin-top:2px;}
 </style>
 </head>
 <body>
@@ -508,6 +516,32 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
     </div>
     <div class="modal-body">
       <div class="summary-box lp" id="lpSummary"></div>
+      <div class="f-section">
+        <div class="f-title lp">借用用途</div>
+        <div class="purpose-cards">
+          <label class="purpose-card" id="purposeCardSpss">
+            <input type="radio" name="lpPurposeType" value="spss" checked onchange="onPurposeChange()">
+            <div class="purpose-card-body">
+              <div class="purpose-card-title">🟢 SPSS 統計軟體</div>
+              <div class="purpose-card-desc">全院開放，無需驗證碼</div>
+            </div>
+          </label>
+          <label class="purpose-card" id="purposeCardGeneral">
+            <input type="radio" name="lpPurposeType" value="general" onchange="onPurposeChange()">
+            <div class="purpose-card-body">
+              <div class="purpose-card-title">🔵 一般使用</div>
+              <div class="purpose-card-desc">教學研究部同仁專用，需輸入驗證碼</div>
+            </div>
+          </label>
+        </div>
+        <!-- 驗證碼欄位（選一般使用才顯示）-->
+        <div id="lpDeptCodeWrap" style="display:none;margin-top:12px;">
+          <label class="f-label">部門驗證碼 <span class="req">*</span></label>
+          <input class="f-input lp" id="lpDeptCode" type="text" placeholder="請輸入部門驗證碼">
+          <div class="err-msg" id="lpDeptCodeErr">⚠️ 驗證碼錯誤，請確認後重新輸入。</div>
+        </div>
+      </div>
+
       <div class="f-section">
         <div class="f-title lp">借用時段</div>
         <div class="f-row">
@@ -856,9 +890,17 @@ function renderLpBkList(){
     cancelBtn.className='btn-cancel-bk lp';
     cancelBtn.textContent='✕ 取消借用';
     cancelBtn.onclick=()=>openCancelModal(b.id,'laptop');
+    // 判斷是否為 SPSS 借用
+    const isSpss=b.purpose&&b.purpose.includes('SPSS');
+    const usageBadge=isSpss
+      ?'<span class="badge" style="background:#d1fae5;color:#065f46">🟢 SPSS</span>'
+      :(b.purpose&&b.purpose.includes('一般')
+        ?'<span class="badge" style="background:#dbeafe;color:#1d4ed8">🔵 一般</span>'
+        :'');
     it.innerHTML='<div class="bk-time">'+b.startTime+' – '+b.endTime+'</div>'
       +'<div class="bk-info">'+b.empName+'（'+b.empDept+'）'+(b.purpose?'・'+b.purpose:'')+'</div>'
-      +'<span class="badge badge-lp">'+lbl+'</span>';
+      +'<span class="badge badge-lp">'+lbl+'</span>'
+      +usageBadge;
     if(!isPast)it.appendChild(cancelBtn);
     lst.appendChild(it);
   });
@@ -919,11 +961,35 @@ function openLaptopModal(){
 }
 function closeLaptopModal(){document.getElementById('laptopModal').classList.remove('show');clearForm('lp');}
 
+const LP_DEPT_CODE='clh7200';
+
+function onPurposeChange(){
+  const val=document.querySelector('input[name="lpPurposeType"]:checked').value;
+  document.getElementById('lpDeptCodeWrap').style.display=(val==='general')?'':'none';
+  document.getElementById('lpDeptCode').value='';
+  document.getElementById('lpDeptCodeErr').classList.remove('show');
+}
+
 async function submitLaptop(){
   if(S.holidays.has(S.lpDate)){toast('該日為國定假日，不開放借用','error');return;}
   if(!chkFields(['lpEmpId','lpEmpName','lpEmpDept','lpEmpPhone','lpIdCode']))return;
   const idCode=gv('lpIdCode');
   if(idCode.length!==4){toast('身份證後4碼請輸入4位','error');return;}
+
+  // 用途驗證
+  const purposeType=document.querySelector('input[name="lpPurposeType"]:checked').value;
+  const isGeneral=(purposeType==='general');
+  if(isGeneral){
+    const deptCode=document.getElementById('lpDeptCode').value.trim();
+    if(!deptCode){toast('請輸入部門驗證碼','error');return;}
+    if(deptCode!==LP_DEPT_CODE){
+      document.getElementById('lpDeptCodeErr').classList.add('show');
+      toast('部門驗證碼錯誤','error');return;
+    }
+    document.getElementById('lpDeptCodeErr').classList.remove('show');
+  }
+  const purposeLabel=isGeneral?'🔵 一般使用':'🟢 SPSS統計軟體';
+
   const st=document.getElementById('lpStart').value,en=document.getElementById('lpEnd').value;
   if(t2m(st)>=t2m(en)){toast('結束時間必須晚於開始時間','error');return;}
   const req=slots(st,en);
@@ -933,9 +999,11 @@ async function submitLaptop(){
   document.getElementById('lpSubmitBtn').disabled=true;
   showLoad('送出申請中…');
   try{
+    const extraPurpose=gv('lpPurpose');
+    const finalPurpose=purposeLabel+(extraPurpose?'（'+extraPurpose+'）':'');
     const r=await apiCall({action:'book',type:'laptop',date:S.lpDate,startTime:st,endTime:en,
       empId:gv('lpEmpId'),empName:gv('lpEmpName'),empDept:gv('lpEmpDept'),empPhone:gv('lpEmpPhone'),
-      purpose:gv('lpPurpose'),needLaptop:'是',idCode:idCode});
+      purpose:finalPurpose,needLaptop:'是',idCode:idCode});
     if(r&&r.status==='ok'){closeLaptopModal();toast('✅ 筆電借用申請成功！','success');await loadAll();}
     else toast('送出失敗：'+(r&&r.message?r.message:'請稍後再試'),'error');
   }catch(e){toast('連線失敗，請稍後再試','error');}
@@ -1033,6 +1101,15 @@ function clearForm(p){
     document.getElementById('rConflict').classList.remove('show');
   }else{
     document.getElementById('lpConflict').classList.remove('show');
+    // 重設用途選擇為 SPSS（預設）
+    const spssRadio=document.querySelector('input[name="lpPurposeType"][value="spss"]');
+    if(spssRadio){spssRadio.checked=true;}
+    const wrap=document.getElementById('lpDeptCodeWrap');
+    if(wrap)wrap.style.display='none';
+    const codeEl=document.getElementById('lpDeptCode');
+    if(codeEl)codeEl.value='';
+    const codeErr=document.getElementById('lpDeptCodeErr');
+    if(codeErr)codeErr.classList.remove('show');
   }
 }
 function showLoad(msg){document.getElementById('loadingText').textContent=msg;document.getElementById('loadingOverlay').classList.add('show');}
