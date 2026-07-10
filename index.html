@@ -475,14 +475,36 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
         <div class="err-msg" id="rConflict">&#9888; 所選時段與現有借用衝突，請重新選擇。</div>
       </div>
       <div class="f-section">
-        <div class="f-title">設備需求</div>
-        <label class="chk-card">
-          <input type="checkbox" id="rNeedLaptop">
-          <div>
-            <div class="chk-lbl">💻 同時借用筆記型電腦</div>
-            <div class="chk-desc">借用期間一併申請筆電（系統將自動檢查筆電是否空閒）</div>
-          </div>
-        </label>
+        <div class="f-title">筆電需求</div>
+        <div class="purpose-cards">
+          <label class="purpose-card">
+            <input type="radio" name="rLaptopType" value="none" checked onchange="onRoomLaptopChange()">
+            <div>
+              <div class="purpose-card-title">❌ 不需要筆電</div>
+              <div class="purpose-card-desc">僅借用會議室</div>
+            </div>
+          </label>
+          <label class="purpose-card" id="rPurposeCardSpss">
+            <input type="radio" name="rLaptopType" value="spss" onchange="onRoomLaptopChange()">
+            <div>
+              <div class="purpose-card-title">🟢 同時借用筆電 — SPSS 統計軟體</div>
+              <div class="purpose-card-desc">全院開放，無需驗證碼</div>
+            </div>
+          </label>
+          <label class="purpose-card" id="rPurposeCardGeneral">
+            <input type="radio" name="rLaptopType" value="general" onchange="onRoomLaptopChange()">
+            <div>
+              <div class="purpose-card-title">🔵 同時借用筆電 — 一般使用</div>
+              <div class="purpose-card-desc">教學研究部同仁專用，需輸入驗證碼</div>
+            </div>
+          </label>
+        </div>
+        <!-- 驗證碼欄位（選一般使用才顯示）-->
+        <div id="rDeptCodeWrap" style="display:none;margin-top:12px;">
+          <label class="f-label">部門驗證碼 <span class="req">*</span></label>
+          <input class="f-input" id="rDeptCode" type="text" placeholder="請輸入部門驗證碼">
+          <div class="err-msg" id="rDeptCodeErr">⚠️ 驗證碼錯誤，請確認後重新輸入。</div>
+        </div>
       </div>
       <div class="f-section">
         <div class="f-title">借用人資料</div>
@@ -920,27 +942,54 @@ function openRoomModal(){
 }
 function closeRoomModal(){document.getElementById('roomModal').classList.remove('show');clearForm('r');}
 
+function onRoomLaptopChange(){
+  const val=document.querySelector('input[name="rLaptopType"]:checked').value;
+  document.getElementById('rDeptCodeWrap').style.display=(val==='general')?'':'none';
+  document.getElementById('rDeptCode').value='';
+  document.getElementById('rDeptCodeErr').classList.remove('show');
+}
+
 async function submitRoom(){
   if(S.holidays.has(S.selDate)){toast('該日為國定假日，不開放借用','error');return;}
   if(!chkFields(['rEmpId','rEmpName','rEmpDept','rEmpPhone','rIdCode']))return;
   const idCode=gv('rIdCode');
   if(idCode.length!==4){toast('身份證後4碼請輸入4位','error');return;}
+
+  // 筆電用途判斷
+  const laptopType=document.querySelector('input[name="rLaptopType"]:checked').value;
+  const nl=(laptopType!=='none');
+
+  // 若選一般使用，需驗證碼
+  if(laptopType==='general'){
+    const deptCode=document.getElementById('rDeptCode').value.trim();
+    if(!deptCode){toast('請輸入部門驗證碼','error');return;}
+    if(deptCode!==LP_DEPT_CODE){
+      document.getElementById('rDeptCodeErr').classList.add('show');
+      toast('部門驗證碼錯誤','error');return;
+    }
+    document.getElementById('rDeptCodeErr').classList.remove('show');
+  }
+
   const st=document.getElementById('rStart').value,en=document.getElementById('rEnd').value;
   if(t2m(st)>=t2m(en)){toast('結束時間必須晚於開始時間','error');return;}
   const req=slots(st,en);
   if(S.roomBk.filter(b=>b.date===S.selDate).some(b=>slots(b.startTime,b.endTime).some(s=>req.includes(s)))){
     document.getElementById('rConflict').classList.add('show');toast('所選時段衝突','error');return;
   }
-  const nl=document.getElementById('rNeedLaptop').checked;
   if(nl&&S.laptopBk.filter(b=>b.date===S.selDate).some(b=>slots(b.startTime,b.endTime).some(s=>req.includes(s)))){
     toast('此時段筆電已被借用','error');return;
   }
+
+  const laptopLabel=laptopType==='spss'?'🟢 SPSS統計軟體':laptopType==='general'?'🔵 一般使用':'';
+  const extraPurpose=gv('rPurpose');
+  const finalPurpose=extraPurpose+(laptopLabel&&nl?'（筆電：'+laptopLabel+'）':'');
+
   document.getElementById('rSubmitBtn').disabled=true;
   showLoad('送出申請中…');
   try{
     const r=await apiCall({action:'book',type:'room',date:S.selDate,startTime:st,endTime:en,
       empId:gv('rEmpId'),empName:gv('rEmpName'),empDept:gv('rEmpDept'),empPhone:gv('rEmpPhone'),
-      purpose:gv('rPurpose'),needLaptop:nl?'是':'否',idCode:idCode});
+      purpose:finalPurpose,needLaptop:nl?'是':'否',idCode:idCode});
     if(r&&r.status==='ok'){closeRoomModal();toast('✅ 會議室借用申請成功！','success');await loadAll();}
     else toast('送出失敗：'+(r&&r.message?r.message:'請稍後再試'),'error');
   }catch(e){toast('連線失敗，請稍後再試','error');}
@@ -1097,7 +1146,15 @@ function clearForm(p){
     const el=document.getElementById(id);if(el){el.value='';el.classList.remove('err');}
   });
   if(p==='r'){
-    document.getElementById('rNeedLaptop').checked=false;
+    // 重設筆電選項為「不需要」
+    const noneRadio=document.querySelector('input[name="rLaptopType"][value="none"]');
+    if(noneRadio)noneRadio.checked=true;
+    const wrap=document.getElementById('rDeptCodeWrap');
+    if(wrap)wrap.style.display='none';
+    const codeEl=document.getElementById('rDeptCode');
+    if(codeEl)codeEl.value='';
+    const codeErr=document.getElementById('rDeptCodeErr');
+    if(codeErr)codeErr.classList.remove('show');
     document.getElementById('rConflict').classList.remove('show');
   }else{
     document.getElementById('lpConflict').classList.remove('show');
